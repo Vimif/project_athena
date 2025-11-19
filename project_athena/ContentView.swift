@@ -11,18 +11,19 @@ enum NetworkType {
 
 /// Carte widget Apple : info ressource + barre + stats (recommandations iOS/iPhone)
 struct StatAppleCard: View {
-    let icon: String         // SF Symbol, ex: "internaldrive"
-    let iconColor: Color     // couleur symbole
-    let iconBg: Color        // fond carré icône
-    let title: String        // titre, ex: "Stockage"
-    let valueLeft: String    // ex: "207.8 G/511.4 G"
-    let valueRight: String   // ex: "40.6%"
-    let percent: Double      // 0...1
+    let icon: String
+    let iconColor: Color
+    let iconBg: Color
+    let title: String
+    let valueLeft: String
+    let valueRight: String
+    let percent: Double
     let barGradient: LinearGradient
+    var valueStatus: String? = nil // Pour les cartes spéciales comme la batterie
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            // Icône + titre côte à côte, compacts
+            // Icône + titre
             HStack(spacing: 7) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -37,10 +38,23 @@ struct StatAppleCard: View {
                 Text(title)
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundColor(.white)
-                    .font(.title2)
                 Spacer()
             }
-            // Barre de progression fine
+            // Ligne custom statut/%
+            if let valueStatus = valueStatus {
+                HStack {
+                    Text(valueStatus)
+                        .font(.system(size: 11))
+                        .foregroundColor(.gray)
+                    Spacer()
+                    Text(valueLeft)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(iconBg)
+                }
+                .padding(.bottom, 1)
+            }
+
+            // Barre fine de progression
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Capsule()
@@ -52,21 +66,21 @@ struct StatAppleCard: View {
                 }
             }
             .frame(height: 8)
-            // Stat principale
-            HStack(alignment: .firstTextBaseline) {
-                Text(valueLeft)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white)
-                    .font(.title2)
-                Spacer()
-                if !valueRight.isEmpty {
-                    Text(valueRight)
+
+            // (Stats classiques pour RAM/CPU/Stockage)
+            if valueStatus == nil {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(valueLeft)
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.white)
-                        .font(.title2)
-                } else {
-                    Text("  ").font(.system(size: 11)).foregroundColor(.clear)
-                        .font(.title2)
+                    Spacer()
+                    if !valueRight.isEmpty {
+                        Text(valueRight)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                    } else {
+                        Text(" ").font(.system(size: 11)).foregroundColor(.clear)
+                    }
                 }
             }
         }
@@ -79,6 +93,7 @@ struct StatAppleCard: View {
         .frame(minWidth: 120, maxWidth: .infinity, minHeight: 74, maxHeight: 92)
     }
 }
+
 
 struct NetPanelAppleRefined: View {
     let points: [NetworkSample]
@@ -126,12 +141,12 @@ struct NetPanelAppleRefined: View {
                 Spacer()
                 HStack(spacing: 13) {
                     HStack(spacing: 5) {
-                        RoundedRectangle(cornerRadius: 3).fill(Color.green).frame(width: 13, height: 8)
-                        Text("Upload").foregroundColor(.gray).font(.system(size: 9, weight: .medium))
-                    }
-                    HStack(spacing: 5) {
                         RoundedRectangle(cornerRadius: 3).fill(Color.blue).frame(width: 13, height: 8)
                         Text("Download").foregroundColor(.gray).font(.system(size: 9, weight: .medium))
+                    }
+                    HStack(spacing: 5) {
+                        RoundedRectangle(cornerRadius: 3).fill(Color.green).frame(width: 13, height: 8)
+                        Text("Upload").foregroundColor(.gray).font(.system(size: 9, weight: .medium))
                     }
                 }
             }
@@ -368,7 +383,7 @@ struct ContentView: View {
     @State private var cpuFraction: Double = 0
     @State private var batteryLevel: Float = UIDevice.current.batteryLevel
     @State private var batteryState: UIDevice.BatteryState = UIDevice.current.batteryState
-
+    
     @State private var lastUsage: AppNetworkUsage = getNetworkUsage()
     
     @StateObject var dlPublisher = DisplayLinkPublisher()
@@ -386,10 +401,11 @@ struct ContentView: View {
     ]
     
     // Ensuite ton timer remplacera ces valeurs après quelques ticks.
-
-
+    var batteryStatusText: String = ""
+    
+    
     let timer = Timer.publish(every: 0.9, on: .main, in: .common).autoconnect()
-
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -398,15 +414,15 @@ struct ContentView: View {
                 let stockageTotal = stockageTuple?.total ?? 1.0
                 let stockageUsed = stockageTuple != nil ? stockageTuple!.total - stockageTuple!.free : 0.0
                 let percentUsed = stockageTotal > 0 ? stockageUsed / stockageTotal : 0
-
+                
                 let ramGo = Double(ProcessInfo.processInfo.physicalMemory) / 1024 / 1024 / 1024
                 let ramUsedGo = ramFraction * ramGo
                 let percentRam = ramFraction
-
+                
                 // --------- Dashboard en grille 2x2 ---------
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                     // (Prépare tes let avant, comme dans les exemples précédents)
-
+                    
                     StatAppleCard(
                         icon: "cpu",
                         iconColor: .white,
@@ -420,7 +436,7 @@ struct ContentView: View {
                             startPoint: .leading, endPoint: .trailing
                         )
                     )
-
+                    
                     StatAppleCard(
                         icon: "memorychip",
                         iconColor: .white,
@@ -434,7 +450,7 @@ struct ContentView: View {
                             startPoint: .leading, endPoint: .trailing
                         )
                     )
-
+                    
                     StatAppleCard(
                         icon: "internaldrive",
                         iconColor: .white,
@@ -448,19 +464,23 @@ struct ContentView: View {
                             startPoint: .leading, endPoint: .trailing
                         )
                     )
-
+                    
                     StatAppleCard(
                         icon: "battery.100",
-                        iconColor: batteryIconColor(batteryState),
-                        iconBg: Color.green.opacity(0.9),
+                        iconColor: .white,
+                        iconBg: appleBatteryColor(level: batteryLevel, state: batteryState),
                         title: "Batterie",
-                        valueLeft: batteryStateText(batteryState),
-                        valueRight: String(format: "%.0f%%", batteryLevel*100),
-                        percent: Double(max(0, min(batteryLevel, 1))),
+                        valueLeft: String(format: "%.0f%%", max(0, min(1, batteryLevel)) * 100),
+                        valueRight: "",
+                        percent: Double(max(0, min(batteryLevel,1))),
                         barGradient: LinearGradient(
-                            gradient: Gradient(colors: [Color.green, Color(.systemTeal)]),
+                            gradient: Gradient(colors: [
+                                appleBatteryColor(level: batteryLevel, state: batteryState),
+                                Color(.systemGray3)
+                            ]),
                             startPoint: .leading, endPoint: .trailing
-                        )
+                        ),
+                        valueStatus: batteryStatusText(batteryState) // ← la fonction ci-dessous
                     )
                 }
                 // --------- Bloc graphique réseau ---------
@@ -474,10 +494,10 @@ struct ContentView: View {
                             .bold()
                         Spacer()
                         Text("↓ \(String(format: "%.2f", (netPoints.last?.download ?? 0) / 1024)) MB/s")
-                            .foregroundColor(Color(red: 33/255, green: 150/255, blue: 243/255))
+                            .foregroundColor(Color(red: 0/255, green: 136/255, blue: 255/255))
                             .font(.system(size: 11, weight: .medium))
                         Text("↑ \(String(format: "%.2f", (netPoints.last?.upload ?? 0) / 1024)) MB/s")
-                            .foregroundColor(Color(red: 67/255, green: 234/255, blue: 92/255))
+                            .foregroundColor(Color(red: 52/255, green: 199/255, blue: 89/255))
                             .font(.system(size: 11, weight: .medium))
                     }
                     NetPanelAppleRefined(
@@ -518,11 +538,11 @@ struct ContentView: View {
                 refreshStats()
                 let usageNow = getNetworkUsage()
                 let downKBs = usageNow.received >= lastUsage.received
-                    ? Double(usageNow.received - lastUsage.received) / 1024.0
-                    : 0.0
+                ? Double(usageNow.received - lastUsage.received) / 1024.0
+                : 0.0
                 let upKBs = usageNow.sent >= lastUsage.sent
-                    ? Double(usageNow.sent - lastUsage.sent) / 1024.0
-                    : 0.0
+                ? Double(usageNow.sent - lastUsage.sent) / 1024.0
+                : 0.0
                 netPoints.append(NetworkSample(upload: upKBs, download: downKBs))
                 if netPoints.count > 40 { netPoints.removeFirst() }
                 totalDownload += downKBs
@@ -537,14 +557,6 @@ struct ContentView: View {
         batteryLevel = UIDevice.current.batteryLevel
         batteryState = UIDevice.current.batteryState
     }
-    func batteryStateText(_ state: UIDevice.BatteryState) -> String {
-        switch state {
-        case .charging: return "En charge"
-        case .full:     return "Full"
-        case .unplugged: return "Secteur débranché"
-        default:        return "Inconnu"
-        }
-    }
     func batteryIconColor(_ state: UIDevice.BatteryState) -> Color {
         switch state {
         case .charging: return .yellow
@@ -553,8 +565,21 @@ struct ContentView: View {
         default:        return .gray
         }
     }
+    func batteryStatusText(_ state: UIDevice.BatteryState) -> String {
+        switch state {
+            case .charging:  return "En charge"
+            case .full:      return "Pleine"
+            case .unplugged: return "Sur batterie"
+            default:         return "-"
+        }
+    }
+    func appleBatteryColor(level: Float, state: UIDevice.BatteryState, lowPower: Bool = ProcessInfo.processInfo.isLowPowerModeEnabled) -> Color {
+        if state == .unknown { return Color(.systemGray3) }
+        if lowPower { return Color(.systemYellow) }
+        if level <= 0.20 { return Color(.systemRed) }
+        return Color(.systemGreen)
+    }
 }
-
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()

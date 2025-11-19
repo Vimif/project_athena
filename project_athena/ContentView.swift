@@ -29,8 +29,9 @@ struct StatAppleCard: View {
                         .foregroundColor(iconColor)
                 }
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundColor(.white)
+                    .font(.title2)
                 Spacer()
             }
             // Barre de progression fine
@@ -48,15 +49,18 @@ struct StatAppleCard: View {
             // Stat principale
             HStack(alignment: .firstTextBaseline) {
                 Text(valueLeft)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundColor(.white)
+                    .font(.title2)
                 Spacer()
                 if !valueRight.isEmpty {
                     Text(valueRight)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.white)
+                        .font(.title2)
                 } else {
-                    Text("  ").font(.system(size: 16)).foregroundColor(.clear)
+                    Text("  ").font(.system(size: 11)).foregroundColor(.clear)
+                        .font(.title2)
                 }
             }
         }
@@ -305,8 +309,8 @@ struct ContentView: View {
                 let stockageUsed = stockageTuple != nil ? stockageTuple!.total - stockageTuple!.free : 0.0
                 let percentUsed = stockageTotal > 0 ? stockageUsed / stockageTotal : 0
 
-                let ramMo = Double(ProcessInfo.processInfo.physicalMemory) / 1024 / 1024
-                let ramUsedMo = ramFraction * ramMo
+                let ramGo = Double(ProcessInfo.processInfo.physicalMemory) / 1024 / 1024 / 1024
+                let ramUsedGo = ramFraction * ramGo
                 let percentRam = ramFraction
 
                 let percentCpu = cpuFraction
@@ -335,7 +339,7 @@ struct ContentView: View {
                         iconColor: .white,
                         iconBg: Color.cyan.opacity(0.85),
                         title: "RAM",
-                        valueLeft: String(format: "%.0f Mo/%.0f Mo", ramUsedMo, ramMo),
+                        valueLeft: String(format: "%.2f Go / %.2f Go", ramUsedGo, ramGo),
                         valueRight: String(format: "%.1f%%", percentRam*100),
                         percent: percentRam,
                         barGradient: LinearGradient(
@@ -378,7 +382,9 @@ struct ContentView: View {
                         Image(systemName: "wifi")
                             .foregroundColor(.green)
                         Text("Réseau (KB/s)")
-                            .font(.headline)
+                            .font(.system(size: 13, weight: .semibold))
+                            .font(.title2)
+                            .bold()
                         Spacer()
                         if let pt = netPoints.last {
                             Text(String(format: "↓ %.1f / ↑ %.1f", pt.download, pt.upload))

@@ -217,6 +217,7 @@ struct StatAppleCard: View {
     var body: some View {
         CaseView(caseColor: caseColor) {
             VStack(alignment: .leading, spacing: 10) {
+                // En-tête icône + titre
                 HStack(spacing: 10) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -231,17 +232,7 @@ struct StatAppleCard: View {
                         .foregroundColor(.primary)
                     Spacer()
                 }
-                if let valueStatus = valueStatus {
-                    HStack {
-                        Text(valueStatus)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(valueLeft)
-                            .font(.subheadline)
-                            .foregroundColor(iconBg)
-                    }
-                }
+                // Barre de progression TOUJOURS au-dessus
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Capsule()
@@ -253,7 +244,18 @@ struct StatAppleCard: View {
                     }
                 }
                 .frame(height: 8)
-                if valueStatus == nil {
+                // Bloc statistiques ou status
+                if let valueStatus = valueStatus {
+                    HStack {
+                        Text(valueStatus)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(valueLeft)
+                            .font(.subheadline)
+                            .foregroundColor(iconBg)
+                    }
+                } else {
                     HStack(alignment: .firstTextBaseline) {
                         Text(valueLeft)
                             .font(.caption)

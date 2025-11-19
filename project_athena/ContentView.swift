@@ -2,6 +2,12 @@ import SwiftUI
 import Combine
 import Foundation
 import Darwin
+import Network
+
+enum NetworkType {
+    case wifi
+    case cellular
+}
 
 /// Carte widget Apple : info ressource + barre + stats (recommandations iOS/iPhone)
 struct StatAppleCard: View {
@@ -74,49 +80,77 @@ struct StatAppleCard: View {
     }
 }
 
-struct NetPanelCompact: View {
+struct NetPanelAppleRefined: View {
     let points: [NetworkSample]
-    let lastDownload: Double
-    let lastUpload: Double
+    let totalDownload: Double // KB
+    let totalUpload: Double   // KB
+    let maxPoints: Int
+    let window: Int
+    let isWiFi: Bool // à passer dynamiquement
 
     var body: some View {
         VStack(spacing: 8) {
-            HStack {
-                Image(systemName: "wifi")
+            // Header compact
+            HStack(spacing: 8) {
+                Image(systemName: isWiFi ? "wifi" : "antenna.radiowaves.left.and.right")
                     .foregroundColor(.green)
-                    .font(.system(size: 15, weight: .semibold))
-                Text("↓ \(String(format: "%.1f", lastDownload/1024)) MB/s")
-                    .foregroundColor(.blue)
-                    .font(.footnote)
-                Text("↑ \(String(format: "%.1f", lastUpload/1024)) MB/s")
-                    .foregroundColor(.green)
-                    .font(.footnote)
+                    .font(.system(size: 15))
                 Spacer()
+                Text("↓ \(String(format: "%.2f", (points.last?.download ?? 0) / 1024)) MB/s")
+                    .foregroundColor(Color(red: 33/255, green: 150/255, blue: 243/255))
+                    .font(.system(size: 11, weight: .medium))
+                Text("↑ \(String(format: "%.2f", (points.last?.upload ?? 0) / 1024)) MB/s")
+                    .foregroundColor(Color(red: 67/255, green: 234/255, blue: 92/255))
+                    .font(.system(size: 11, weight: .medium))
             }
-            .padding(.bottom, -2)
-            NetGraphCompact(points: points, maxPoints: 36, window: 7)
-            HStack(spacing: 7) {
-                RoundedRectangle(cornerRadius: 3).fill(Color.green).frame(width: 10, height: 5)
-                Text("Upload").foregroundColor(.green).font(.caption2)
-                RoundedRectangle(cornerRadius: 3).fill(Color.blue).frame(width: 10, height: 5)
-                Text("Download").foregroundColor(.blue).font(.caption2)
+            HStack {
+                Text("Utilisation totale")
+                    .foregroundColor(.gray.opacity(0.88))
+                    .font(.system(size: 11, weight: .medium))
                 Spacer()
+                HStack(spacing: 10) {
+                    HStack(spacing: 2) {
+                        Circle().fill(Color(red: 33/255, green: 150/255, blue: 243/255)).frame(width: 11, height: 11)
+                        Text(String(format: "%.1f Mo", totalDownload / 1024))
+                            .foregroundColor(Color(red: 33/255, green: 150/255, blue: 243/255)).font(.system(size: 9))
+                    }
+                    HStack(spacing: 2) {
+                        Circle().fill(Color(red: 67/255, green: 234/255, blue: 92/255)).frame(width: 11, height: 11)
+                        Text(String(format: "%.1f Mo", totalUpload / 1024))
+                            .foregroundColor(Color(red: 67/255, green: 234/255, blue: 92/255)).font(.system(size: 9))
+                    }
+                }
+            }
+            NetGraphAppleRefined(points: points, maxPoints: maxPoints, window: window)
+                .frame(height: 46)
+            HStack {
+                Spacer()
+                HStack(spacing: 12) {
+                    HStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 2).fill(Color(red: 67/255, green: 234/255, blue: 92/255)).frame(width: 10, height: 6)
+                        Text("Upload").foregroundColor(.gray).font(.system(size: 11))
+                    }
+                    HStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 2).fill(Color(red: 33/255, green: 150/255, blue: 243/255)).frame(width: 10, height: 6)
+                        Text("Download").foregroundColor(.gray).font(.system(size: 11))
+                    }
+                }
             }
         }
-        .padding(.all, 10)
-        .background(RoundedRectangle(cornerRadius: 13).fill(Color(.tertiarySystemBackground)))
+        .padding(.vertical, 10).padding(.horizontal, 12)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemBackground)))
+        .shadow(color: Color.black.opacity(0.09), radius: 5, x: 0, y: 2)
     }
 }
 
-
 // --------- Composant Graphique Réseau ---------
-struct NetGraphCompact: View {
+struct NetGraphAppleRefined: View {
     let points: [NetworkSample]
     let maxPoints: Int
     let window: Int
 
-    let downloadColor: Color = .blue
-    let uploadColor: Color = .green
+    let downloadColor = Color(red: 33/255, green: 150/255, blue: 243/255)
+    let uploadColor   = Color(red: 67/255, green: 234/255, blue: 92/255)
 
     func rollingAverage(_ values: [Double]) -> [Double] {
         guard values.count > window else { return values }
@@ -129,7 +163,6 @@ struct NetGraphCompact: View {
         }
         return avg
     }
-
     func catmullRomPath(values: [Double], size: CGSize) -> Path? {
         let total = min(values.count, maxPoints)
         guard total > 3 else { return nil }
@@ -148,51 +181,70 @@ struct NetGraphCompact: View {
             let p1 = pts[i]
             let p2 = pts[i+1]
             let p3 = (i+2 < pts.count) ? pts[i+2] : p2
-            for t in stride(from: 0, through: 1, by: 0.14) {
+            for t in stride(from: 0, through: 1, by: 0.13) {
                 let tt = CGFloat(t)
                 let x = 0.5 * ((2*p1.x) +
                     (-p0.x + p2.x)*tt +
-                    (2*p0.x - 5*p1.x + 4*p2.x - p3.x) * tt*tt +
-                    (-p0.x + 3*p1.x - 3*p2.x + p3.x) * tt*tt*tt)
+                    (2*p0.x - 5*p1.x + 4*p2.x - p3.x)*tt*tt +
+                    (-p0.x + 3*p1.x - 3*p2.x + p3.x)*tt*tt*tt)
                 let y = 0.5 * ((2*p1.y) +
                     (-p0.y + p2.y)*tt +
-                    (2*p0.y - 5*p1.y + 4*p2.y - p3.y) * tt*tt +
-                    (-p0.y + 3*p1.y - 3*p2.y + p3.y) * tt*tt*tt)
+                    (2*p0.y - 5*p1.y + 4*p2.y - p3.y)*tt*tt +
+                    (-p0.y + 3*p1.y - 3*p2.y + p3.y)*tt*tt*tt)
                 path.addLine(to: CGPoint(x: x, y: y))
             }
         }
         return path
     }
-
     var body: some View {
         GeometryReader { geo in
             let smoothDownload = rollingAverage(points.map { $0.download })
             let smoothUpload = rollingAverage(points.map { $0.upload })
+            let gridVals = [128, 96, 64, 32]
             ZStack {
-                // Graduation simple (128, 64)
-                ForEach([64, 128], id: \.self) { val in
-                    let y = geo.size.height - geo.size.height * CGFloat(Double(val) / max(smoothDownload.max() ?? 128, 128))
-                    Rectangle().fill(Color.gray.opacity(0.19))
-                        .frame(height: 1)
-                        .position(x: geo.size.width / 2, y: y)
+                // Labels à gauche + lignes horizontales centrées
+                ForEach(gridVals, id: \.self) { val in
+                    let y = geo.size.height - geo.size.height * CGFloat(Double(val) / 128)
+                    HStack(spacing: 0) {
+                        Text("\(val) KB/s")
+                            .font(.caption2)
+                            .foregroundColor(downloadColor)
+                            .frame(width: 40, alignment: .trailing)        // largeur = label
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.18))
+                            .frame(height: 1)
+                            .frame(maxWidth: .infinity)
+                    }
+                    // Place le label à gauche, la ligne prend tout le reste de la largeur
+                    .frame(width: geo.size.width, alignment: .leading)
+                    .position(x: geo.size.width/2, y: y)
                 }
                 // Courbes
                 if let dpath = catmullRomPath(values: smoothDownload, size: geo.size) {
-                    dpath.stroke(downloadColor, style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
-                        .animation(.easeInOut(duration: 0.32), value: points)
+                    dpath.stroke(downloadColor, style: StrokeStyle(lineWidth: 2.1, lineCap: .round))
+                        .animation(.easeInOut(duration: 0.2), value: points)
                 }
                 if let upath = catmullRomPath(values: smoothUpload, size: geo.size) {
-                    upath.stroke(uploadColor, style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
-                        .animation(.easeInOut(duration: 0.32), value: points)
+                    upath.stroke(uploadColor, style: StrokeStyle(lineWidth: 1.1, lineCap: .round))
+                        .animation(.easeInOut(duration: 0.2), value: points)
                 }
             }
         }
-        .frame(height: 56)
-        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 }
 
-
+var type: NetworkType = .wifi
+func getCurrentNetworkType() -> NetworkType {
+    let monitor = NWPathMonitor()
+    let queue = DispatchQueue(label: "Monitor")
+    var type: NetworkType = .wifi
+    monitor.pathUpdateHandler = { path in
+        if path.usesInterfaceType(.wifi) { type = .wifi }
+        else if path.usesInterfaceType(.cellular) { type = .cellular }
+    }
+    monitor.start(queue: queue)
+    return type
+}
 
 // --------- Modèle réseau ---------
 struct AppNetworkUsage {
@@ -392,13 +444,15 @@ struct ContentView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    NetPanelCompact(
+                    NetPanelAppleRefined(
                         points: netPoints,
-                        lastDownload: netPoints.last?.download ?? 0,
-                        lastUpload: netPoints.last?.upload ?? 0
+                        totalDownload: totalDownload,
+                        totalUpload: totalUpload,
+                        maxPoints: 28,
+                        window: 7,
+                        isWiFi: true// à remplacer par ta logique
                     )
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
                 }
                 .padding()
                 .frame(maxWidth: .infinity)

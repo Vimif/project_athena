@@ -125,14 +125,14 @@ struct NetPanelAppleRefined: View {
                 .frame(height: 46)
             HStack {
                 Spacer()
-                HStack(spacing: 12) {
-                    HStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 2).fill(Color(red: 67/255, green: 234/255, blue: 92/255)).frame(width: 10, height: 6)
-                        Text("Upload").foregroundColor(.gray).font(.system(size: 11))
+                HStack(spacing: 13) {
+                    HStack(spacing: 5) {
+                        RoundedRectangle(cornerRadius: 3).fill(Color.green).frame(width: 13, height: 8)
+                        Text("Upload").foregroundColor(.gray).font(.system(size: 9, weight: .medium))
                     }
-                    HStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 2).fill(Color(red: 33/255, green: 150/255, blue: 243/255)).frame(width: 10, height: 6)
-                        Text("Download").foregroundColor(.gray).font(.system(size: 11))
+                    HStack(spacing: 5) {
+                        RoundedRectangle(cornerRadius: 3).fill(Color.blue).frame(width: 13, height: 8)
+                        Text("Download").foregroundColor(.gray).font(.system(size: 9, weight: .medium))
                     }
                 }
             }
@@ -143,14 +143,27 @@ struct NetPanelAppleRefined: View {
     }
 }
 
+struct DashedLine: View {
+    var body: some View {
+        GeometryReader { geo in
+            Path { path in
+                path.move(to: .zero)
+                path.addLine(to: CGPoint(x: geo.size.width, y: 0))
+            }
+            .stroke(style: StrokeStyle(lineWidth: 1, dash: [7, 7]))
+            .foregroundColor(Color.gray.opacity(0.25))
+        }
+    }
+}
+
 // --------- Composant Graphique Réseau ---------
 struct NetGraphAppleRefined: View {
     let points: [NetworkSample]
     let maxPoints: Int
     let window: Int
 
-    let downloadColor = Color(red: 33/255, green: 150/255, blue: 243/255)
-    let uploadColor   = Color(red: 67/255, green: 234/255, blue: 92/255)
+    let downloadColor = Color.blue
+    let uploadColor   = Color.green
 
     func rollingAverage(_ values: [Double]) -> [Double] {
         guard values.count > window else { return values }
@@ -163,10 +176,11 @@ struct NetGraphAppleRefined: View {
         }
         return avg
     }
+
     func catmullRomPath(values: [Double], size: CGSize) -> Path? {
         let total = min(values.count, maxPoints)
         guard total > 3 else { return nil }
-        let valmax = max(values.max() ?? 128, 128)
+        let valmax = max(values.max() ?? 256, 256)
         let stepX = size.width / CGFloat(max(total-1,1))
         var pts: [CGPoint] = []
         for i in 0..<total {
@@ -183,55 +197,111 @@ struct NetGraphAppleRefined: View {
             let p3 = (i+2 < pts.count) ? pts[i+2] : p2
             for t in stride(from: 0, through: 1, by: 0.13) {
                 let tt = CGFloat(t)
-                let x = 0.5 * ((2*p1.x) +
-                    (-p0.x + p2.x)*tt +
-                    (2*p0.x - 5*p1.x + 4*p2.x - p3.x)*tt*tt +
-                    (-p0.x + 3*p1.x - 3*p2.x + p3.x)*tt*tt*tt)
-                let y = 0.5 * ((2*p1.y) +
-                    (-p0.y + p2.y)*tt +
-                    (2*p0.y - 5*p1.y + 4*p2.y - p3.y)*tt*tt +
-                    (-p0.y + 3*p1.y - 3*p2.y + p3.y)*tt*tt*tt)
+                let x = 0.5 * ((2*p1.x)
+                    + (-p0.x + p2.x)*tt
+                    + (2*p0.x - 5*p1.x + 4*p2.x - p3.x)*tt*tt
+                    + (-p0.x + 3*p1.x - 3*p2.x + p3.x)*tt*tt*tt)
+                let y = 0.5 * ((2*p1.y)
+                    + (-p0.y + p2.y)*tt
+                    + (2*p0.y - 5*p1.y + 4*p2.y - p3.y)*tt*tt
+                    + (-p0.y + 3*p1.y - 3*p2.y + p3.y)*tt*tt*tt)
                 path.addLine(to: CGPoint(x: x, y: y))
             }
         }
         return path
     }
+
     var body: some View {
         GeometryReader { geo in
             let smoothDownload = rollingAverage(points.map { $0.download })
             let smoothUpload = rollingAverage(points.map { $0.upload })
-            let gridVals = [128, 96, 64, 32]
+            let gridVals = [256, 192, 128, 64]
+            let gridCount = Double(gridVals.count - 1)
+            let verticalLines = 6
+
             ZStack {
-                // Labels à gauche + lignes horizontales centrées
-                ForEach(gridVals, id: \.self) { val in
-                    let y = geo.size.height - geo.size.height * CGFloat(Double(val) / 128)
-                    HStack(spacing: 0) {
-                        Text("\(val) KB/s")
-                            .font(.caption2)
-                            .foregroundColor(downloadColor)
-                            .frame(width: 40, alignment: .trailing)        // largeur = label
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.18))
-                            .frame(height: 1)
-                            .frame(maxWidth: .infinity)
+                // 1. LIGNES VERTICALES (grille Apple)
+                ForEach(0..<verticalLines, id: \.self) { i in
+                    let x = 55 + CGFloat(i) * (geo.size.width - 65) / CGFloat(verticalLines - 1)
+                    Path { path in
+                        path.move(to: CGPoint(x: x, y: 0))
+                        path.addLine(to: CGPoint(x: x, y: geo.size.height))
                     }
-                    // Place le label à gauche, la ligne prend tout le reste de la largeur
-                    .frame(width: geo.size.width, alignment: .leading)
-                    .position(x: geo.size.width/2, y: y)
+                    .stroke(Color.gray.opacity(0.23), style: StrokeStyle(lineWidth: 1, dash: [5,7]))
                 }
-                // Courbes
+
+                // 2. LIGNES HORIZONTALES, bien alignées avec les labels
+                ForEach(0..<gridVals.count, id: \.self) { i in
+                    let y = geo.size.height * CGFloat(Double(i) / gridCount)
+                    Path { path in
+                        path.move(to: CGPoint(x: 55, y: y)) // commence à droite du label (x=55)
+                        path.addLine(to: CGPoint(x: geo.size.width-10, y: y))
+                    }
+                    .stroke(Color.gray.opacity(0.38), style: StrokeStyle(lineWidth: 1, dash: [7,7]))
+                }
+
+                // 3. LES COURBES (toujours sous les labels)
                 if let dpath = catmullRomPath(values: smoothDownload, size: geo.size) {
-                    dpath.stroke(downloadColor, style: StrokeStyle(lineWidth: 2.1, lineCap: .round))
-                        .animation(.easeInOut(duration: 0.2), value: points)
+                    dpath.stroke(downloadColor, style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+                        .animation(.easeInOut(duration: 0.24), value: points)
                 }
                 if let upath = catmullRomPath(values: smoothUpload, size: geo.size) {
-                    upath.stroke(uploadColor, style: StrokeStyle(lineWidth: 1.1, lineCap: .round))
-                        .animation(.easeInOut(duration: 0.2), value: points)
+                    upath.stroke(uploadColor, style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+                        .animation(.easeInOut(duration: 0.24), value: points)
+                }
+
+                // 4. LES LABELS (par-dessus tout, zIndex(2))
+                ForEach(0..<gridVals.count, id: \.self) { i in
+                    let val = gridVals[i]
+                    let y = geo.size.height * CGFloat(Double(i) / gridCount)
+                    Text("\(val) KB/s")
+                        .font(.system(size: 8, weight: .medium, design: .rounded))
+                        .foregroundColor(.blue)
+                        .padding(.vertical, -2)
+                        .padding(.horizontal, 3)
+                        .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.4)))
+                        .position(x: 27, y: y)
+                        .zIndex(2)
                 }
             }
         }
     }
+
+    // Lignes verticales — carrés grille Apple
+    @ViewBuilder
+    private func verticalGridLines(verticalLines: Int, geo: GeometryProxy) -> some View {
+        ForEach(0..<verticalLines, id: \.self) { i in
+            // Décale X pour commencer la grille juste après les labels, ajuste 55/60 selon largeur
+            let x = 55 + CGFloat(i) * (geo.size.width - 65) / CGFloat(verticalLines - 1)
+            Path { path in
+                path.move(to: CGPoint(x: x, y: 0))
+                path.addLine(to: CGPoint(x: x, y: geo.size.height))
+            }
+            .stroke(Color.gray.opacity(0.23), style: StrokeStyle(lineWidth: 1, dash: [5,7]))
+        }
+    }
+
+    // Label + trait horizontal bien aligné, UN label par ligne
+    @ViewBuilder
+    private func labelWithLine(val: Int, y: CGFloat, geo: GeometryProxy) -> some View {
+        Text("\(val) KB/s")
+            .font(.system(size: 9, weight: .regular, design: .rounded))
+            .foregroundColor(.blue)
+            .padding(.horizontal, 4)
+            .padding(.vertical, -2)
+            .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.55)))
+            .position(x: 22, y: y)
+            .zIndex(2)
+        // ligne horizontale partant juste après le label
+        Path { path in
+            path.move(to: CGPoint(x: 110, y: y))
+            path.addLine(to: CGPoint(x: geo.size.width-10, y: y))
+        }
+        .stroke(Color.gray.opacity(0.38), style: StrokeStyle(lineWidth: 1, dash: [7,7]))
+    }
 }
+
+
 
 var type: NetworkType = .wifi
 func getCurrentNetworkType() -> NetworkType {
@@ -365,7 +435,6 @@ struct ContentView: View {
                 let ramUsedGo = ramFraction * ramGo
                 let percentRam = ramFraction
 
-                let percentCpu = cpuFraction
                 let percentBattery = Double(batteryLevel)
 
                 // --------- Dashboard en grille 2x2 ---------

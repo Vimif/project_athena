@@ -116,9 +116,11 @@ struct ContentView: View {
                         )
                     }
                     // MARK: - Network Graph Case
-                    CaseView(title: "Réseau (KB/s)", caseColor: .graphBackground) {
+                    CaseView(caseColor: .graphBackground) {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
+                                Text("Réseau (KB/s)")
+                                    .font(.headline)
                                 Spacer()
                                 Text("↓ \(String(format: "%.2f", (netPoints.last?.download ?? 0) / 1024)) MB/s")
                                     .foregroundColor(.blue)

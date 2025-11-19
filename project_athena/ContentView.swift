@@ -4,12 +4,204 @@ import Foundation
 import Darwin
 import Network
 
+// MARK: - Enums & Data Models
+
 enum NetworkType {
     case wifi
     case cellular
 }
 
-/// Carte widget Apple : info ressource + barre + stats (recommandations iOS/iPhone)
+struct NetworkSample: Equatable {
+    let upload: Double // KB/s
+    let download: Double // KB/s
+}
+
+struct AppNetworkUsage {
+    var sent: UInt64 = 0
+    var received: UInt64 = 0
+}
+
+// MARK: - Main Content View
+
+struct ContentView: View {
+    @State private var ramFraction: Double = 0
+    @State private var cpuFraction: Double = 0
+    @State private var batteryLevel: Float = UIDevice.current.batteryLevel
+    @State private var batteryState: UIDevice.BatteryState = UIDevice.current.batteryState
+    @State private var lastUsage: AppNetworkUsage = getNetworkUsage()
+    @State private var totalDownload: Double = 0
+    @State private var totalUpload: Double = 0
+    @State private var netPoints: [NetworkSample] = []
+    @State private var isWiFi: Bool = true
+    private let timer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 16) {
+                    // MARK: - Cards Grid
+                    LazyVGrid(
+                        columns: [GridItem(.flexible()), GridItem(.flexible())],
+                        spacing: 16
+                    ) {
+                        // CPU Card
+                        StatAppleCard(
+                            icon: "cpu",
+                            iconColor: .white,
+                            iconBg: Color.blue.opacity(0.85),
+                            title: "CPU",
+                            valueLeft: "Syst: 3.2%",
+                            valueRight: String(format: "%.1f%%", cpuFraction * 100),
+                            percent: cpuFraction,
+                            barGradient: LinearGradient(
+                                gradient: Gradient(colors: [Color.blue, Color.cyan]),
+                                startPoint: .leading, endPoint: .trailing
+                            ),
+                            caseColor: .cardBackground
+                        )
+                        // RAM Card
+                        let ramGo = Double(ProcessInfo.processInfo.physicalMemory) / 1024 / 1024 / 1024
+                        let ramUsedGo = ramFraction * ramGo
+                        StatAppleCard(
+                            icon: "memorychip",
+                            iconColor: .white,
+                            iconBg: Color.cyan.opacity(0.85),
+                            title: "RAM",
+                            valueLeft: String(format: "%.2f Go / %.2f Go", ramUsedGo, ramGo),
+                            valueRight: String(format: "%.1f%%", ramFraction * 100),
+                            percent: ramFraction,
+                            barGradient: LinearGradient(
+                                gradient: Gradient(colors: [Color.cyan, Color.blue]),
+                                startPoint: .leading, endPoint: .trailing
+                            ),
+                            caseColor: .cardBackground
+                        )
+                        // Storage Card
+                        let storageTuple = LocalSystemMetrics.storageInfo()
+                        let storageTotal = storageTuple?.total ?? 1.0
+                        let storageUsed = storageTuple != nil ? storageTuple!.total - storageTuple!.free : 0.0
+                        let percentUsed = (storageTotal > 0) ? (storageUsed / storageTotal) : 0
+                        StatAppleCard(
+                            icon: "internaldrive",
+                            iconColor: .white,
+                            iconBg: Color.purple.opacity(0.85),
+                            title: "Stockage",
+                            valueLeft: String(format: "%.1f G/%.1f G", storageUsed, storageTotal),
+                            valueRight: String(format: "%.1f%%", percentUsed * 100),
+                            percent: percentUsed,
+                            barGradient: LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, Color.pink]),
+                                startPoint: .leading, endPoint: .trailing
+                            ),
+                            caseColor: .cardBackground
+                        )
+                        // Battery Card
+                        StatAppleCard(
+                            icon: "battery.100",
+                            iconColor: .white,
+                            iconBg: appleBatteryColor(level: batteryLevel, state: batteryState),
+                            title: "Batterie",
+                            valueLeft: String(format: "%.0f%%", max(0, min(1, batteryLevel)) * 100),
+                            valueRight: "",
+                            percent: Double(max(0, min(batteryLevel, 1))),
+                            barGradient: LinearGradient(
+                                gradient: Gradient(colors: [
+                                    appleBatteryColor(level: batteryLevel, state: batteryState),
+                                    Color(.systemGray3)
+                                ]),
+                                startPoint: .leading, endPoint: .trailing
+                            ),
+                            valueStatus: batteryStatusText(batteryState),
+                            caseColor: .cardBackground
+                        )
+                    }
+                    // MARK: - Network Graph Case
+                    CaseView(title: "Réseau (KB/s)", caseColor: .graphBackground) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Spacer()
+                                Text("↓ \(String(format: "%.2f", (netPoints.last?.download ?? 0) / 1024)) MB/s")
+                                    .foregroundColor(.blue)
+                                    .font(.caption)
+                                Text("↑ \(String(format: "%.2f", (netPoints.last?.upload ?? 0) / 1024)) MB/s")
+                                    .foregroundColor(.green)
+                                    .font(.caption)
+                            }
+                            NetPanelAppleRefined(
+                                points: netPoints,
+                                totalDownload: totalDownload,
+                                totalUpload: totalUpload,
+                                maxPoints: 28,
+                                window: 7,
+                                isWiFi: isWiFi
+                            )
+                            .frame(height: 130)
+                        }
+                        .padding()
+                    }
+                }
+                .padding()
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Tableau de bord")
+        }
+        .preferredColorScheme(.dark)
+        .onAppear {
+            UIDevice.current.isBatteryMonitoringEnabled = true
+            refreshStats()
+            refreshNetworkType()
+            NotificationCenter.default.addObserver(forName: UIDevice.batteryLevelDidChangeNotification, object: nil, queue: .main) { _ in
+                refreshStats()
+            }
+            NotificationCenter.default.addObserver(forName: UIDevice.batteryStateDidChangeNotification, object: nil, queue: .main) { _ in
+                refreshStats()
+            }
+        }
+        .onReceive(timer) { _ in
+            withAnimation(.easeInOut(duration: 0.25)) {
+                refreshStats()
+                let usageNow = getNetworkUsage()
+                let downKBs = usageNow.received >= lastUsage.received
+                    ? Double(usageNow.received - lastUsage.received) / 1024.0
+                    : 0.0
+                let upKBs = usageNow.sent >= lastUsage.sent
+                    ? Double(usageNow.sent - lastUsage.sent) / 1024.0
+                    : 0.0
+                netPoints.append(NetworkSample(upload: upKBs, download: downKBs))
+                if netPoints.count > 40 { netPoints.removeFirst() }
+                totalDownload += downKBs
+                totalUpload += upKBs
+                lastUsage = usageNow
+            }
+        }
+    }
+
+    // MARK: - Stat Refresh
+    func refreshStats() {
+        DispatchQueue.global().async {
+            let ram = min(max(LocalSystemMetrics.ramUsedFraction(), 0), 1)
+            let cpu = min(max(LocalSystemMetrics.cpuUsageFraction(), 0), 1)
+            let level = UIDevice.current.batteryLevel
+            let state = UIDevice.current.batteryState
+            DispatchQueue.main.async {
+                self.ramFraction = ram
+                self.cpuFraction = cpu
+                self.batteryLevel = level
+                self.batteryState = state
+            }
+        }
+    }
+    func refreshNetworkType() {
+        getCurrentNetworkType { type in
+            DispatchQueue.main.async {
+                self.isWiFi = (type == .wifi)
+            }
+        }
+    }
+}
+
+// MARK: - StatAppleCard (Case)
+
 struct StatAppleCard: View {
     let icon: String
     let iconColor: Color
@@ -19,81 +211,96 @@ struct StatAppleCard: View {
     let valueRight: String
     let percent: Double
     let barGradient: LinearGradient
-    var valueStatus: String? = nil // Pour les cartes spéciales comme la batterie
+    var valueStatus: String? = nil
+    var caseColor: Color = Color(.systemBackground)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            // Icône + titre
-            HStack(spacing: 7) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(iconBg)
-                        .frame(width: 32, height: 32)
-                    Image(systemName: icon)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 18, height: 18)
-                        .foregroundColor(iconColor)
-                }
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white)
-                Spacer()
-            }
-            // Ligne custom statut/%
-            if let valueStatus = valueStatus {
-                HStack {
-                    Text(valueStatus)
-                        .font(.system(size: 11))
-                        .foregroundColor(.gray)
+        CaseView(caseColor: caseColor) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(iconBg)
+                            .frame(width: 30, height: 30)
+                        Image(systemName: icon)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(iconColor)
+                    }
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(.primary)
                     Spacer()
-                    Text(valueLeft)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundColor(iconBg)
                 }
-                .padding(.bottom, 1)
-            }
-
-            // Barre fine de progression
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color(.systemGray4))
-                        .frame(height: 8)
-                    Capsule()
-                        .fill(barGradient)
-                        .frame(width: geometry.size.width * CGFloat(max(min(percent,1),0)), height: 8)
+                if let valueStatus = valueStatus {
+                    HStack {
+                        Text(valueStatus)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(valueLeft)
+                            .font(.subheadline)
+                            .foregroundColor(iconBg)
+                    }
                 }
-            }
-            .frame(height: 8)
-
-            // (Stats classiques pour RAM/CPU/Stockage)
-            if valueStatus == nil {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(valueLeft)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
-                    Spacer()
-                    if !valueRight.isEmpty {
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color(.tertiarySystemFill))
+                            .frame(height: 8)
+                        Capsule()
+                            .fill(barGradient)
+                            .frame(width: geometry.size.width * CGFloat(max(min(percent, 1), 0)), height: 8)
+                    }
+                }
+                .frame(height: 8)
+                if valueStatus == nil {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(valueLeft)
+                            .font(.caption)
+                            .foregroundColor(.primary)
+                        Spacer()
                         Text(valueRight)
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundColor(.white)
-                    } else {
-                        Text(" ").font(.system(size: 11)).foregroundColor(.clear)
+                            .font(.caption)
+                            .foregroundColor(.primary)
                     }
                 }
             }
         }
-        .padding(.vertical, 11)
-        .padding(.horizontal, 13)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.tertiarySystemBackground))
-        )
-        .frame(minWidth: 120, maxWidth: .infinity, minHeight: 74, maxHeight: 92)
     }
 }
 
+// MARK: - CaseView wrapper
+
+struct CaseView<Content: View>: View {
+    var title: String? = nil
+    var caseColor: Color = Color(.systemBackground)
+    var content: Content
+
+    init(title: String? = nil, caseColor: Color = Color(.systemBackground), @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.caseColor = caseColor
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            if let title = title {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+            }
+            content
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(caseColor)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 2)
+    }
+}
+
+// MARK: - Network Graph et Panel dans une case
 
 struct NetPanelAppleRefined: View {
     let points: [NetworkSample]
@@ -101,41 +308,40 @@ struct NetPanelAppleRefined: View {
     let totalUpload: Double   // KB
     let maxPoints: Int
     let window: Int
-    let isWiFi: Bool // à passer dynamiquement
+    let isWiFi: Bool
 
     var body: some View {
         VStack(spacing: 8) {
-            // Bandeau "Utilisation totale" (hors graphique !)
+            // Utilisation totale
             HStack {
                 Text("Utilisation totale")
                     .foregroundColor(.gray.opacity(0.88))
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.caption)
                 Spacer()
                 HStack(spacing: 10) {
                     HStack(spacing: 2) {
-                        Image(systemName: "arrow.down.circle").foregroundColor(Color(red: 0/255, green: 136/255, blue: 255/255))
+                        Image(systemName: "arrow.down.circle")
+                            .foregroundColor(.blue)
                         Text(String(format: "%.1f Mo", totalDownload / 1024))
-                            .foregroundColor(.white).font(Font.system(size: 9))
+                            .foregroundColor(.primary)
+                            .font(.caption)
                     }
                     HStack(spacing: 2) {
-                        Image(systemName: "arrow.up.circle").foregroundColor(Color(red: 52/255, green: 199/255, blue: 89/255))
+                        Image(systemName: "arrow.up.circle")
+                            .foregroundColor(.green)
                         Text(String(format: "%.1f Mo", totalUpload / 1024))
-                            .foregroundColor(.white).font(Font.system(size: 9))
+                            .foregroundColor(.primary)
+                            .font(.caption)
                     }
                 }
             }
-
-            // GRAPHIQUE toujours APRES le texte bandeau
             NetGraphAppleRefined(points: points, maxPoints: maxPoints, window: window)
-                .frame(height: 130) // ← plus grand (**tu peux tester 110, 130 ou même 160 selon besoin**)
+                .frame(height: 110)
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemBackground)))
-        .shadow(color: Color.black.opacity(0.09), radius: 5, x: 0, y: 2)
     }
-
 }
+
+// MARK: - DashedLine View
 
 struct DashedLine: View {
     var body: some View {
@@ -150,7 +356,8 @@ struct DashedLine: View {
     }
 }
 
-// --------- Composant Graphique Réseau ---------
+// MARK: - Network Graph et Smooth
+
 struct NetGraphAppleRefined: View {
     let points: [NetworkSample]
     let maxPoints: Int
@@ -163,10 +370,10 @@ struct NetGraphAppleRefined: View {
         guard values.count > window else { return values }
         var avg: [Double] = []
         for i in 0..<values.count {
-            let lower = max(0, i-window/2)
-            let upper = min(values.count-1, i+window/2)
+            let lower = max(0, i - window / 2)
+            let upper = min(values.count - 1, i + window / 2)
             let slice = Array(values[lower...upper])
-            avg.append(slice.reduce(0,+) / Double(slice.count))
+            avg.append(slice.reduce(0, +) / Double(slice.count))
         }
         return avg
     }
@@ -175,17 +382,17 @@ struct NetGraphAppleRefined: View {
         let total = min(values.count, maxPoints)
         guard total > 3 else { return nil }
         let valmax = max(values.max() ?? 256, 256)
-        let stepX = size.width / CGFloat(max(total-1,1))
+        let stepX = size.width / CGFloat(max(total - 1, 1))
         var pts: [CGPoint] = []
         for i in 0..<total {
             let x = CGFloat(i) * stepX
-            let y = size.height - CGFloat(values[values.count-total+i] / valmax) * size.height
+            let y = size.height - CGFloat(values[values.count - total + i] / valmax) * size.height
             pts.append(CGPoint(x: x, y: y))
         }
         var path = Path()
         path.move(to: pts[0])
         for i in 0..<pts.count-1 {
-            let p0 = i>0 ? pts[i-1] : pts[i]
+            let p0 = i > 0 ? pts[i-1] : pts[i]
             let p1 = pts[i]
             let p2 = pts[i+1]
             let p3 = (i+2 < pts.count) ? pts[i+2] : p2
@@ -210,9 +417,8 @@ struct NetGraphAppleRefined: View {
             let gridVals = [256, 192, 128, 64]
             let verticalLines = 6
             let cases = 4
-            
             ZStack {
-                // Lignes principales (traits séparateurs de chaque case)
+                // Lignes horizontales
                 ForEach(0...cases, id: \.self) { i in
                     let y = geo.size.height * CGFloat(Double(i) / Double(cases))
                     Path { path in
@@ -221,22 +427,18 @@ struct NetGraphAppleRefined: View {
                     }
                     .stroke(Color.gray.opacity(0.33), style: StrokeStyle(lineWidth: 0.8, dash: [5,5]))
                 }
-
-                // Labels CENTRÉS, au milieu de chaque case !
+                // Labels
                 ForEach(0..<gridVals.count, id: \.self) { i in
-                    // Le centre d'une case est entre les séparateurs donc :
-                    // y = (hautDeCase * hCase + basDeCase * hCase) / 2 = (i + 0.5) / cases
-                    let y = geo.size.height * CGFloat((Double(i) + 0.5) / Double(cases))
+                    let y = geo.size.height * CGFloat((Double(i)+0.5)/Double(cases))
                     Text("\(gridVals[i]) KB/s")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .font(.caption2)
                         .foregroundColor(.blue.opacity(0.5))
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
+                        .padding(3)
                         .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.60)))
                         .position(x: 34, y: y)
                         .zIndex(2)
                 }
-                // LIGNES VERTICALES
+                // Lignes verticales
                 ForEach(0..<verticalLines, id: \.self) { i in
                     let x = CGFloat(i) * (geo.size.width-15) / CGFloat(verticalLines-1) + 7
                     Path { path in
@@ -245,12 +447,11 @@ struct NetGraphAppleRefined: View {
                     }
                     .stroke(Color.gray.opacity(0.22), style: StrokeStyle(lineWidth: 1, dash: [5,5]))
                 }
-                // COURBES
+                // Courbes
                 let smoothDownload = rollingAverage(points.map { $0.download })
                 let smoothUpload = rollingAverage(points.map { $0.upload })
-
                 if let dpath = catmullRomPath(values: smoothDownload, size: geo.size) {
-                    dpath.stroke(downloadColor, style: StrokeStyle(lineWidth: 1.1, lineCap: .round))
+                    dpath.stroke(downloadColor, style: StrokeStyle(lineWidth: 2.1, lineCap: .round))
                         .animation(.easeInOut(duration: 0.21), value: points)
                 }
                 if let upath = catmullRomPath(values: smoothUpload, size: geo.size) {
@@ -263,28 +464,22 @@ struct NetGraphAppleRefined: View {
     }
 }
 
-var type: NetworkType = .wifi
-func getCurrentNetworkType() -> NetworkType {
+// MARK: - Utile: NetworkType, Usage, Storage
+
+func getCurrentNetworkType(completion: @escaping (NetworkType) -> Void) {
     let monitor = NWPathMonitor()
     let queue = DispatchQueue(label: "Monitor")
-    var type: NetworkType = .wifi
     monitor.pathUpdateHandler = { path in
-        if path.usesInterfaceType(.wifi) { type = .wifi }
-        else if path.usesInterfaceType(.cellular) { type = .cellular }
+        defer { monitor.cancel() }
+        if path.usesInterfaceType(.wifi) {
+            completion(.wifi)
+        } else if path.usesInterfaceType(.cellular) {
+            completion(.cellular)
+        }
     }
     monitor.start(queue: queue)
-    return type
 }
 
-// --------- Modèle réseau ---------
-struct AppNetworkUsage {
-    var sent: UInt64 = 0
-    var received: UInt64 = 0
-}
-struct NetworkSample: Equatable {
-    let upload: Double // KB/s
-    let download: Double // KB/s
-}
 func getNetworkUsage() -> AppNetworkUsage {
     var sent: UInt64 = 0
     var received: UInt64 = 0
@@ -306,7 +501,8 @@ func getNetworkUsage() -> AppNetworkUsage {
     return AppNetworkUsage(sent: sent, received: received)
 }
 
-// --------- Metrics système ---------
+// MARK: - Système Metrics
+
 struct LocalSystemMetrics {
     static func ramUsedFraction() -> Double {
         var info = mach_task_basic_info()
@@ -323,7 +519,6 @@ struct LocalSystemMetrics {
     }
     private static let threadBasicInfoCount: mach_msg_type_number_t =
         UInt32(MemoryLayout<thread_basic_info_data_t>.size / MemoryLayout<integer_t>.size)
-
     static func cpuUsageFraction() -> Double {
         var threads: thread_act_array_t?
         var threadCount = mach_msg_type_number_t()
@@ -347,226 +542,38 @@ struct LocalSystemMetrics {
     }
     static func storageInfo() -> (free: Double, total: Double)? {
         if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
-            let free = attrs[.systemFreeSize] as? Double,
-            let total = attrs[.systemSize] as? Double {
+           let free = attrs[.systemFreeSize] as? Double,
+           let total = attrs[.systemSize] as? Double {
             return (free / 1024 / 1024 / 1024, total / 1024 / 1024 / 1024)
         }
         return nil
     }
 }
 
-// --------- Vue principale ---------
-struct ContentView: View {
-    @State private var ramFraction: Double = 0
-    @State private var cpuFraction: Double = 0
-    @State private var batteryLevel: Float = UIDevice.current.batteryLevel
-    @State private var batteryState: UIDevice.BatteryState = UIDevice.current.batteryState
-    
-    @State private var lastUsage: AppNetworkUsage = getNetworkUsage()
-    
-    @StateObject var dlPublisher = DisplayLinkPublisher()
-    
-    @State private var frameCount: Int = 0
-    
-    @State private var totalDownload: Double = 0
-    @State private var totalUpload: Double = 0
-    
-    @State private var netPoints: [NetworkSample] = [
-        NetworkSample(upload: 10, download: 20),
-        NetworkSample(upload: 12, download: 25),
-        NetworkSample(upload: 8, download: 15),
-        NetworkSample(upload: 11, download: 22)
-    ]
-    
-    // Ensuite ton timer remplacera ces valeurs après quelques ticks.
-    var batteryStatusText: String = ""
-    
-    
-    let timer = Timer.publish(every: 0.9, on: .main, in: .common).autoconnect()
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // --------- Préparation des données ---------
-                let stockageTuple = LocalSystemMetrics.storageInfo()
-                let stockageTotal = stockageTuple?.total ?? 1.0
-                let stockageUsed = stockageTuple != nil ? stockageTuple!.total - stockageTuple!.free : 0.0
-                let percentUsed = stockageTotal > 0 ? stockageUsed / stockageTotal : 0
-                
-                let ramGo = Double(ProcessInfo.processInfo.physicalMemory) / 1024 / 1024 / 1024
-                let ramUsedGo = ramFraction * ramGo
-                let percentRam = ramFraction
-                
-                // --------- Dashboard en grille 2x2 ---------
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    // (Prépare tes let avant, comme dans les exemples précédents)
-                    
-                    StatAppleCard(
-                        icon: "cpu",
-                        iconColor: .white,
-                        iconBg: Color.blue.opacity(0.85),
-                        title: "CPU",
-                        valueLeft: "Syst: 3.2%", // ou "", ce que tu veux sur la stat à gauche
-                        valueRight: String(format: "%.1f%%", cpuFraction*100),
-                        percent: cpuFraction,
-                        barGradient: LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, Color.cyan]),
-                            startPoint: .leading, endPoint: .trailing
-                        )
-                    )
-                    
-                    StatAppleCard(
-                        icon: "memorychip",
-                        iconColor: .white,
-                        iconBg: Color.cyan.opacity(0.85),
-                        title: "RAM",
-                        valueLeft: String(format: "%.2f Go / %.2f Go", ramUsedGo, ramGo),
-                        valueRight: String(format: "%.1f%%", percentRam*100),
-                        percent: percentRam,
-                        barGradient: LinearGradient(
-                            gradient: Gradient(colors: [Color.cyan, Color.blue]),
-                            startPoint: .leading, endPoint: .trailing
-                        )
-                    )
-                    
-                    StatAppleCard(
-                        icon: "internaldrive",
-                        iconColor: .white,
-                        iconBg: Color.purple.opacity(0.85),
-                        title: "Stockage",
-                        valueLeft: String(format: "%.1f G/%.1f G", stockageUsed, stockageTotal),
-                        valueRight: String(format: "%.1f%%", percentUsed * 100),
-                        percent: percentUsed,
-                        barGradient: LinearGradient(
-                            gradient: Gradient(colors: [Color.purple, Color.pink]),
-                            startPoint: .leading, endPoint: .trailing
-                        )
-                    )
-                    
-                    StatAppleCard(
-                        icon: "battery.100",
-                        iconColor: .white,
-                        iconBg: appleBatteryColor(level: batteryLevel, state: batteryState),
-                        title: "Batterie",
-                        valueLeft: String(format: "%.0f%%", max(0, min(1, batteryLevel)) * 100),
-                        valueRight: "",
-                        percent: Double(max(0, min(batteryLevel,1))),
-                        barGradient: LinearGradient(
-                            gradient: Gradient(colors: [
-                                appleBatteryColor(level: batteryLevel, state: batteryState),
-                                Color(.systemGray3)
-                            ]),
-                            startPoint: .leading, endPoint: .trailing
-                        ),
-                        valueStatus: batteryStatusText(batteryState)
-                    )
-                }
-                // --------- Bloc graphique réseau ---------
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack {
-                        Image(systemName: "wifi")
-                            .foregroundColor(.green)
-                        Text("Réseau (KB/s)")
-                            .font(.system(size: 13, weight: .semibold))
-                            .font(.title2)
-                            .bold()
-                        Spacer()
-                        Text("↓ \(String(format: "%.2f", (netPoints.last?.download ?? 0) / 1024)) MB/s")
-                            .foregroundColor(Color(red: 0/255, green: 136/255, blue: 255/255))
-                            .font(.system(size: 11, weight: .medium))
-                        Text("↑ \(String(format: "%.2f", (netPoints.last?.upload ?? 0) / 1024)) MB/s")
-                            .foregroundColor(Color(red: 52/255, green: 199/255, blue: 89/255))
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    NetPanelAppleRefined(
-                        points: netPoints,
-                        totalDownload: totalDownload,
-                        totalUpload: totalUpload,
-                        maxPoints: 28,
-                        window: 7,
-                        isWiFi: true// à remplacer par ta logique
-                    )
-                    .frame(maxWidth: .infinity)
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
-                .shadow(color: Color.blue.opacity(0.08), radius: 2, x: 0, y: 2)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-        }
-        .preferredColorScheme(.dark)
-        .onAppear {
-            UIDevice.current.isBatteryMonitoringEnabled = true
-            refreshStats()
-            NotificationCenter.default.addObserver(forName: UIDevice.batteryLevelDidChangeNotification, object: nil, queue: .main) { _ in
-                refreshStats()
-            }
-            NotificationCenter.default.addObserver(forName: UIDevice.batteryStateDidChangeNotification, object: nil, queue: .main) { _ in
-                refreshStats()
-            }
-        }
-        .onDisappear {
-            NotificationCenter.default.removeObserver(self, name: UIDevice.batteryLevelDidChangeNotification, object: nil)
-            NotificationCenter.default.removeObserver(self, name: UIDevice.batteryStateDidChangeNotification, object: nil)
-        }
-        .onReceive(timer) { _ in
-            withAnimation(.easeInOut(duration: 0.25)) {
-                refreshStats()
-                let usageNow = getNetworkUsage()
-                let downKBs = usageNow.received >= lastUsage.received
-                ? Double(usageNow.received - lastUsage.received) / 1024.0
-                : 0.0
-                let upKBs = usageNow.sent >= lastUsage.sent
-                ? Double(usageNow.sent - lastUsage.sent) / 1024.0
-                : 0.0
-                netPoints.append(NetworkSample(upload: upKBs, download: downKBs))
-                if netPoints.count > 40 { netPoints.removeFirst() }
-                totalDownload += downKBs
-                totalUpload += upKBs
-                lastUsage = usageNow
-            }
-        }
-    }
-    func refreshStats() {
-        DispatchQueue.global().async {
-            let ram = min(max(LocalSystemMetrics.ramUsedFraction(), 0), 1)
-            let cpu = min(max(LocalSystemMetrics.cpuUsageFraction(), 0), 1)
-            let level = UIDevice.current.batteryLevel
-            let state = UIDevice.current.batteryState
-            DispatchQueue.main.async {
-                self.ramFraction = ram
-                self.cpuFraction = cpu
-                self.batteryLevel = level
-                self.batteryState = state
-            }
-        }
-    }
+// MARK: - Batterie
 
-    func batteryIconColor(_ state: UIDevice.BatteryState) -> Color {
-        switch state {
-        case .charging: return .yellow
-        case .full:     return .green
-        case .unplugged: return .white
-        default:        return .gray
-        }
-    }
-    func batteryStatusText(_ state: UIDevice.BatteryState) -> String {
-        switch state {
-            case .charging:  return "En charge"
-            case .full:      return "Pleine"
-            case .unplugged: return "Sur batterie"
-            default:         return "-"
-        }
-    }
-    func appleBatteryColor(level: Float, state: UIDevice.BatteryState, lowPower: Bool = ProcessInfo.processInfo.isLowPowerModeEnabled) -> Color {
-        if state == .unknown { return Color(.systemGray3) }
-        if lowPower { return Color(.systemYellow) }
-        if level <= 0.20 { return Color(.systemRed) }
-        return Color(.systemGreen)
+func batteryStatusText(_ state: UIDevice.BatteryState) -> String {
+    switch state {
+        case .charging:  return "En charge"
+        case .full:      return "Pleine"
+        case .unplugged: return "Sur batterie"
+        default:         return "-"
     }
 }
+func appleBatteryColor(level: Float, state: UIDevice.BatteryState, lowPower: Bool = ProcessInfo.processInfo.isLowPowerModeEnabled) -> Color {
+    if state == .unknown { return Color(.systemGray3) }
+    if lowPower { return Color(.systemYellow) }
+    if level <= 0.20 { return Color(.systemRed) }
+    return Color(.systemGreen)
+}
+
+// MARK: - Couleurs custom pour cases
+
+extension Color {
+    static let cardBackground = Color(.secondarySystemBackground)
+    static let graphBackground = Color(.secondarySystemGroupedBackground)
+}
+
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()

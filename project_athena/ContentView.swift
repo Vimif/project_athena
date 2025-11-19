@@ -105,14 +105,6 @@ struct NetPanelAppleRefined: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            // Header compact
-            HStack(spacing: 8) {
-                Image(systemName: isWiFi ? "wifi" : "antenna.radiowaves.left.and.right")
-                    .foregroundColor(.green)
-                    .font(.system(size: 15))
-                Spacer()
-            }
-
             // Bandeau "Utilisation totale" (hors graphique !)
             HStack {
                 Text("Utilisation totale")
@@ -136,20 +128,6 @@ struct NetPanelAppleRefined: View {
             // GRAPHIQUE toujours APRES le texte bandeau
             NetGraphAppleRefined(points: points, maxPoints: maxPoints, window: window)
                 .frame(height: 130) // ← plus grand (**tu peux tester 110, 130 ou même 160 selon besoin**)
-            // Légende
-            HStack {
-                Spacer()
-                HStack(spacing: 13) {
-                    HStack(spacing: 5) {
-                        RoundedRectangle(cornerRadius: 3).fill(Color.blue).frame(width: 13, height: 8)
-                        Text("Download").foregroundColor(.gray).font(.system(size: 9, weight: .medium))
-                    }
-                    HStack(spacing: 5) {
-                        RoundedRectangle(cornerRadius: 3).fill(Color.green).frame(width: 13, height: 8)
-                        Text("Upload").foregroundColor(.gray).font(.system(size: 9, weight: .medium))
-                    }
-                }
-            }
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
@@ -272,7 +250,7 @@ struct NetGraphAppleRefined: View {
                 let smoothUpload = rollingAverage(points.map { $0.upload })
 
                 if let dpath = catmullRomPath(values: smoothDownload, size: geo.size) {
-                    dpath.stroke(downloadColor, style: StrokeStyle(lineWidth: 2.1, lineCap: .round))
+                    dpath.stroke(downloadColor, style: StrokeStyle(lineWidth: 1.1, lineCap: .round))
                         .animation(.easeInOut(duration: 0.21), value: points)
                 }
                 if let upath = catmullRomPath(values: smoothUpload, size: geo.size) {
@@ -480,7 +458,7 @@ struct ContentView: View {
                             ]),
                             startPoint: .leading, endPoint: .trailing
                         ),
-                        valueStatus: batteryStatusText(batteryState) // ← la fonction ci-dessous
+                        valueStatus: batteryStatusText(batteryState)
                     )
                 }
                 // --------- Bloc graphique réseau ---------
@@ -552,11 +530,20 @@ struct ContentView: View {
         }
     }
     func refreshStats() {
-        ramFraction = min(max(LocalSystemMetrics.ramUsedFraction(), 0), 1)
-        cpuFraction = min(max(LocalSystemMetrics.cpuUsageFraction(), 0), 1)
-        batteryLevel = UIDevice.current.batteryLevel
-        batteryState = UIDevice.current.batteryState
+        DispatchQueue.global().async {
+            let ram = min(max(LocalSystemMetrics.ramUsedFraction(), 0), 1)
+            let cpu = min(max(LocalSystemMetrics.cpuUsageFraction(), 0), 1)
+            let level = UIDevice.current.batteryLevel
+            let state = UIDevice.current.batteryState
+            DispatchQueue.main.async {
+                self.ramFraction = ram
+                self.cpuFraction = cpu
+                self.batteryLevel = level
+                self.batteryState = state
+            }
+        }
     }
+
     func batteryIconColor(_ state: UIDevice.BatteryState) -> Color {
         switch state {
         case .charging: return .yellow

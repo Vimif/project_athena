@@ -96,12 +96,6 @@ struct NetPanelAppleRefined: View {
                     .foregroundColor(.green)
                     .font(.system(size: 15))
                 Spacer()
-                Text("↓ \(String(format: "%.2f", (points.last?.download ?? 0) / 1024)) MB/s")
-                    .foregroundColor(Color(red: 33/255, green: 150/255, blue: 243/255))
-                    .font(.system(size: 11, weight: .medium))
-                Text("↑ \(String(format: "%.2f", (points.last?.upload ?? 0) / 1024)) MB/s")
-                    .foregroundColor(Color(red: 67/255, green: 234/255, blue: 92/255))
-                    .font(.system(size: 11, weight: .medium))
             }
 
             // Bandeau "Utilisation totale" (hors graphique !)
@@ -112,21 +106,21 @@ struct NetPanelAppleRefined: View {
                 Spacer()
                 HStack(spacing: 10) {
                     HStack(spacing: 2) {
-                        Circle().fill(Color(red: 33/255, green: 150/255, blue: 243/255)).frame(width: 11, height: 11)
+                        Image(systemName: "arrow.down.circle").foregroundColor(Color(red: 0/255, green: 136/255, blue: 255/255))
                         Text(String(format: "%.1f Mo", totalDownload / 1024))
-                            .foregroundColor(Color(red: 33/255, green: 150/255, blue: 243/255)).font(.system(size: 9))
+                            .foregroundColor(.white).font(Font.system(size: 9))
                     }
                     HStack(spacing: 2) {
-                        Circle().fill(Color(red: 67/255, green: 234/255, blue: 92/255)).frame(width: 11, height: 11)
+                        Image(systemName: "arrow.up.circle").foregroundColor(Color(red: 52/255, green: 199/255, blue: 89/255))
                         Text(String(format: "%.1f Mo", totalUpload / 1024))
-                            .foregroundColor(Color(red: 67/255, green: 234/255, blue: 92/255)).font(.system(size: 9))
+                            .foregroundColor(.white).font(Font.system(size: 9))
                     }
                 }
             }
 
             // GRAPHIQUE toujours APRES le texte bandeau
             NetGraphAppleRefined(points: points, maxPoints: maxPoints, window: window)
-                .frame(height: 120) // ← plus grand (**tu peux tester 110, 130 ou même 160 selon besoin**)
+                .frame(height: 130) // ← plus grand (**tu peux tester 110, 130 ou même 160 selon besoin**)
             // Légende
             HStack {
                 Spacer()
@@ -221,10 +215,34 @@ struct NetGraphAppleRefined: View {
     var body: some View {
         GeometryReader { geo in
             let gridVals = [256, 192, 128, 64]
-            let gridCount = Double(gridVals.count - 1)
             let verticalLines = 6
-
+            let cases = 4
+            
             ZStack {
+                // Lignes principales (traits séparateurs de chaque case)
+                ForEach(0...cases, id: \.self) { i in
+                    let y = geo.size.height * CGFloat(Double(i) / Double(cases))
+                    Path { path in
+                        path.move(to: CGPoint(x: 50, y: y))
+                        path.addLine(to: CGPoint(x: geo.size.width-7, y: y))
+                    }
+                    .stroke(Color.gray.opacity(0.33), style: StrokeStyle(lineWidth: 0.8, dash: [5,5]))
+                }
+
+                // Labels CENTRÉS, au milieu de chaque case !
+                ForEach(0..<gridVals.count, id: \.self) { i in
+                    // Le centre d'une case est entre les séparateurs donc :
+                    // y = (hautDeCase * hCase + basDeCase * hCase) / 2 = (i + 0.5) / cases
+                    let y = geo.size.height * CGFloat((Double(i) + 0.5) / Double(cases))
+                    Text("\(gridVals[i]) KB/s")
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundColor(.blue.opacity(0.5))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.60)))
+                        .position(x: 34, y: y)
+                        .zIndex(2)
+                }
                 // LIGNES VERTICALES
                 ForEach(0..<verticalLines, id: \.self) { i in
                     let x = CGFloat(i) * (geo.size.width-15) / CGFloat(verticalLines-1) + 7
@@ -232,28 +250,8 @@ struct NetGraphAppleRefined: View {
                         path.move(to: CGPoint(x: x, y: 0))
                         path.addLine(to: CGPoint(x: x, y: geo.size.height))
                     }
-                    .stroke(Color.gray.opacity(0.22), style: StrokeStyle(lineWidth: 1, dash: [5,7]))
+                    .stroke(Color.gray.opacity(0.22), style: StrokeStyle(lineWidth: 1, dash: [5,5]))
                 }
-
-                // LIGNES HORIZONTALES ET LABELS
-                ForEach(0..<gridVals.count, id: \.self) { i in
-                    let val = gridVals[i]
-                    let y = geo.size.height * CGFloat(Double(i) / gridCount)
-                    Path { path in
-                        path.move(to: CGPoint(x: 50, y: y))
-                        path.addLine(to: CGPoint(x: geo.size.width-7, y: y))
-                    }
-                    .stroke(Color.gray.opacity(0.33), style: StrokeStyle(lineWidth: 1, dash: [7,7]))
-                    Text("\(val) KB/s")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundColor(.blue)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.46)))
-                        .position(x: 34, y: y)
-                        .zIndex(2)
-                }
-
                 // COURBES
                 let smoothDownload = rollingAverage(points.map { $0.download })
                 let smoothUpload = rollingAverage(points.map { $0.upload })
@@ -268,7 +266,7 @@ struct NetGraphAppleRefined: View {
                 }
             }
         }
-        .frame(height: 98)
+        .frame(height: 110)
     }
 }
 
@@ -287,16 +285,16 @@ func getCurrentNetworkType() -> NetworkType {
 
 // --------- Modèle réseau ---------
 struct AppNetworkUsage {
-    var sent: UInt32 = 0
-    var received: UInt32 = 0
+    var sent: UInt64 = 0
+    var received: UInt64 = 0
 }
 struct NetworkSample: Equatable {
     let upload: Double // KB/s
     let download: Double // KB/s
 }
 func getNetworkUsage() -> AppNetworkUsage {
-    var sent: UInt32 = 0
-    var received: UInt32 = 0
+    var sent: UInt64 = 0
+    var received: UInt64 = 0
     var addrs: UnsafeMutablePointer<ifaddrs>? = nil
     guard getifaddrs(&addrs) == 0, let firstAddr = addrs else { return AppNetworkUsage(sent: 0, received: 0) }
     var ptr: UnsafeMutablePointer<ifaddrs>? = firstAddr
@@ -305,8 +303,8 @@ func getNetworkUsage() -> AppNetworkUsage {
         if let data = ptr!.pointee.ifa_data {
             let networkData = data.bindMemory(to: if_data.self, capacity: 1).pointee
             if name.hasPrefix("en") || name.hasPrefix("pdp_ip") || name.hasPrefix("awdl") {
-                sent += networkData.ifi_obytes
-                received += networkData.ifi_ibytes
+                sent += UInt64(networkData.ifi_obytes)
+                received += UInt64(networkData.ifi_ibytes)
             }
         }
         ptr = ptr!.pointee.ifa_next
@@ -386,6 +384,7 @@ struct ContentView: View {
         NetworkSample(upload: 8, download: 15),
         NetworkSample(upload: 11, download: 22)
     ]
+    
     // Ensuite ton timer remplacera ces valeurs après quelques ticks.
 
 
@@ -403,8 +402,6 @@ struct ContentView: View {
                 let ramGo = Double(ProcessInfo.processInfo.physicalMemory) / 1024 / 1024 / 1024
                 let ramUsedGo = ramFraction * ramGo
                 let percentRam = ramFraction
-
-                let percentBattery = Double(batteryLevel)
 
                 // --------- Dashboard en grille 2x2 ---------
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
@@ -454,12 +451,12 @@ struct ContentView: View {
 
                     StatAppleCard(
                         icon: "battery.100",
-                        iconColor: .white,
+                        iconColor: batteryIconColor(batteryState),
                         iconBg: Color.green.opacity(0.9),
                         title: "Batterie",
-                        valueLeft: batteryState == .full ? "Full" : String(format: "%.0f", batteryLevel*100) + " %",
-                        valueRight: "",
-                        percent: percentBattery,
+                        valueLeft: batteryStateText(batteryState),
+                        valueRight: String(format: "%.0f%%", batteryLevel*100),
+                        percent: Double(max(0, min(batteryLevel, 1))),
                         barGradient: LinearGradient(
                             gradient: Gradient(colors: [Color.green, Color(.systemTeal)]),
                             startPoint: .leading, endPoint: .trailing
@@ -476,11 +473,12 @@ struct ContentView: View {
                             .font(.title2)
                             .bold()
                         Spacer()
-                        if let pt = netPoints.last {
-                            Text(String(format: "↓ %.1f / ↑ %.1f", pt.download, pt.upload))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                        Text("↓ \(String(format: "%.2f", (netPoints.last?.download ?? 0) / 1024)) MB/s")
+                            .foregroundColor(Color(red: 33/255, green: 150/255, blue: 243/255))
+                            .font(.system(size: 11, weight: .medium))
+                        Text("↑ \(String(format: "%.2f", (netPoints.last?.upload ?? 0) / 1024)) MB/s")
+                            .foregroundColor(Color(red: 67/255, green: 234/255, blue: 92/255))
+                            .font(.system(size: 11, weight: .medium))
                     }
                     NetPanelAppleRefined(
                         points: netPoints,
@@ -504,13 +502,27 @@ struct ContentView: View {
         .onAppear {
             UIDevice.current.isBatteryMonitoringEnabled = true
             refreshStats()
+            NotificationCenter.default.addObserver(forName: UIDevice.batteryLevelDidChangeNotification, object: nil, queue: .main) { _ in
+                refreshStats()
+            }
+            NotificationCenter.default.addObserver(forName: UIDevice.batteryStateDidChangeNotification, object: nil, queue: .main) { _ in
+                refreshStats()
+            }
+        }
+        .onDisappear {
+            NotificationCenter.default.removeObserver(self, name: UIDevice.batteryLevelDidChangeNotification, object: nil)
+            NotificationCenter.default.removeObserver(self, name: UIDevice.batteryStateDidChangeNotification, object: nil)
         }
         .onReceive(timer) { _ in
             withAnimation(.easeInOut(duration: 0.25)) {
                 refreshStats()
                 let usageNow = getNetworkUsage()
-                let downKBs = Double(usageNow.received - lastUsage.received) / 1024.0
-                let upKBs = Double(usageNow.sent - lastUsage.sent) / 1024.0
+                let downKBs = usageNow.received >= lastUsage.received
+                    ? Double(usageNow.received - lastUsage.received) / 1024.0
+                    : 0.0
+                let upKBs = usageNow.sent >= lastUsage.sent
+                    ? Double(usageNow.sent - lastUsage.sent) / 1024.0
+                    : 0.0
                 netPoints.append(NetworkSample(upload: upKBs, download: downKBs))
                 if netPoints.count > 40 { netPoints.removeFirst() }
                 totalDownload += downKBs
@@ -524,5 +536,27 @@ struct ContentView: View {
         cpuFraction = min(max(LocalSystemMetrics.cpuUsageFraction(), 0), 1)
         batteryLevel = UIDevice.current.batteryLevel
         batteryState = UIDevice.current.batteryState
+    }
+    func batteryStateText(_ state: UIDevice.BatteryState) -> String {
+        switch state {
+        case .charging: return "En charge"
+        case .full:     return "Full"
+        case .unplugged: return "Secteur débranché"
+        default:        return "Inconnu"
+        }
+    }
+    func batteryIconColor(_ state: UIDevice.BatteryState) -> Color {
+        switch state {
+        case .charging: return .yellow
+        case .full:     return .green
+        case .unplugged: return .white
+        default:        return .gray
+        }
+    }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
     }
 }

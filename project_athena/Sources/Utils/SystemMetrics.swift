@@ -5,13 +5,8 @@
 //  Created by Thomas Boisaubert on 20/11/2025.
 //
 
-struct DeviceInfoCard_Previews: PreviewProvider {
-    static var previews: some View {
-        DeviceInfoCard()
-            .previewLayout(.sizeThatFits)
-            .padding()
-    }
-}
+import Foundation
+import Darwin
 
 struct SystemMetrics {
     static func ramUsedFraction() -> Double {

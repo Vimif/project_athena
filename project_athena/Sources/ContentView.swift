@@ -1,7 +1,5 @@
 import SwiftUI
 import Combine
-import Foundation
-import Darwin
 import Network
 
 // MARK: - Enums & Data Models
@@ -9,16 +7,6 @@ import Network
 enum NetworkType {
     case wifi
     case cellular
-}
-
-struct NetworkSample: Equatable {
-    let upload: Double // KB/s
-    let download: Double // KB/s
-}
-
-struct AppNetworkUsage {
-    var sent: UInt64 = 0
-    var received: UInt64 = 0
 }
 
 // Fonctions utilitaires dynamiques (identiques à celles déjà données)
@@ -518,13 +506,6 @@ func appleBatteryColor(level: Float, state: UIDevice.BatteryState, lowPower: Boo
     if lowPower { return Color(.systemYellow) }
     if level <= 0.20 { return Color(.systemRed) }
     return Color(.systemGreen)
-}
-
-// MARK: - Couleurs custom pour cases
-
-extension Color {
-    static let cardBackground = Color(.secondarySystemBackground)
-    static let graphBackground = Color(.secondarySystemGroupedBackground)
 }
 
 struct ContentView_Previews: PreviewProvider {

@@ -21,6 +21,124 @@ struct AppNetworkUsage {
     var received: UInt64 = 0
 }
 
+// --------- 1. LA CARTE PRINCIPALE DEVICE DYNAMIQUE ---------
+
+struct DeviceInfoCard: View {
+    var deviceName: String { UIDevice.current.name }
+    var iosVersion: String { "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)" }
+    var model: String { getDeviceModel() }
+    var chip: String { getChipModel(model: model) }
+    var memory: String { getTotalMemory() }
+    var storage: String { getTotalDiskSpace() }
+    var uptime: String { getUptimeString() }
+    var lastReboot: String { getLastBootString() }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 15) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.blue.opacity(0.18))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "iphone.gen3")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 33, height: 35)
+                        .foregroundColor(.blue)
+                }
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(deviceName)
+                        .font(.system(size: 23, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    Text(iosVersion)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(Color.gray.opacity(0.7))
+                        .lineLimit(1)
+                }
+                Spacer()
+            }
+            // Grille 2 colonnes, bien espacée
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 17) {
+                infoRow(label: "Modèle", value: model)
+                infoRow(label: "Stockage", value: storage)
+                infoRow(label: "Puce", value: chip)
+                infoRow(label: "Mémoire", value: memory)
+                infoRow(label: "Temps de fonctionnement", value: uptime)
+                infoRow(label: "Date de redémarrage", value: lastReboot)
+            }
+        }
+        .padding(.vertical, 22)
+        .padding(.horizontal, 22)
+        .background(
+            RoundedRectangle(cornerRadius: 36, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .shadow(color: Color.black.opacity(0.11), radius: 15, x: 0, y: 8)
+        .padding(.horizontal, 6)
+    }
+    // Ligne info style Apple
+    func infoRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color.gray.opacity(0.8))
+                .lineLimit(1)
+            Spacer()
+            Text(value)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.white)
+                .lineLimit(1)
+        }
+    }
+}
+
+// Fonctions utilitaires dynamiques (identiques à celles déjà données)
+func getDeviceModel() -> String {
+    var systemInfo = utsname()
+    uname(&systemInfo)
+    let data = Data(bytes: &systemInfo.machine, count: Int(MemoryLayout.size(ofValue: systemInfo.machine)))
+    let model = String(data: data, encoding: .ascii)?
+        .trimmingCharacters(in: .controlCharacters) ?? "N/A"
+    return model
+}
+func getChipModel(model: String) -> String {
+    let mapping: [String: String] = [
+        "iPhone18,2": "A19 Pro",
+        "iPhone18,1": "A18",
+        // étend la table si besoin
+    ]
+    return mapping[model] ?? "N/A"
+}
+func getTotalMemory() -> String {
+    let memory = ProcessInfo.processInfo.physicalMemory
+    let gb = Double(memory)/1024/1024/1024
+    return String(format: "%.1f GB", gb)
+}
+func getTotalDiskSpace() -> String {
+    if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
+       let total = attrs[.systemSize] as? Double {
+        let gb = total/1024/1024/1024
+        return String(format: "%.1f G", gb)
+    }
+    return "N/A"
+}
+func getUptimeString() -> String {
+    let uptime = ProcessInfo.processInfo.systemUptime
+    let hours = Int(uptime) / 3600
+    let minutes = (Int(uptime) % 3600) / 60
+    let seconds = Int(uptime) % 60
+    return "\(hours)h \(minutes)m \(seconds)s"
+}
+func getLastBootString() -> String {
+    let interval = ProcessInfo.processInfo.systemUptime
+    let bootDate = Date().addingTimeInterval(-interval)
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .medium
+    return formatter.string(from: bootDate)
+}
+
 // MARK: - Main Content View
 
 struct ContentView: View {
@@ -39,6 +157,7 @@ struct ContentView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 16) {
+                    DeviceInfoCard()
                     // MARK: - Cards Grid
                     LazyVGrid(
                         columns: [GridItem(.flexible()), GridItem(.flexible())],

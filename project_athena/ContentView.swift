@@ -144,6 +144,11 @@ struct ContentView: View {
                                     }
                                 }
                             }
+                            
+                            Divider()
+                                .background(Color(.secondarySystemFill))
+                                .padding(.horizontal)
+                            
                             NetPanelAppleRefined(
                                 points: netPoints,
                                 totalDownload: totalDownload,
@@ -341,6 +346,7 @@ struct NetPanelAppleRefined: View {
                     HStack(spacing: 2) {
                         Image(systemName: "arrow.down.circle")
                             .foregroundColor(.blue)
+                            .font(Font.caption.bold())
                         Text(String(format: "%.1f Mo", totalDownload / 1024))
                             .foregroundColor(.primary)
                             .font(.caption)
@@ -348,6 +354,7 @@ struct NetPanelAppleRefined: View {
                     HStack(spacing: 2) {
                         Image(systemName: "arrow.up.circle")
                             .foregroundColor(.green)
+                            .font(.caption.bold())
                         Text(String(format: "%.1f Mo", totalUpload / 1024))
                             .foregroundColor(.primary)
                             .font(.caption)

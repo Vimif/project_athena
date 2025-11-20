@@ -121,13 +121,28 @@ struct ContentView: View {
                             HStack {
                                 Text("Réseau (KB/s)")
                                     .font(.headline)
+                                    .foregroundColor(.white) // ou .primary
                                 Spacer()
-                                Text("↓ \(String(format: "%.2f", (netPoints.last?.download ?? 0) / 1024)) MB/s")
-                                    .foregroundColor(.blue)
-                                    .font(.caption)
-                                Text("↑ \(String(format: "%.2f", (netPoints.last?.upload ?? 0) / 1024)) MB/s")
-                                    .foregroundColor(.green)
-                                    .font(.caption)
+                                HStack(spacing: 8) {
+                                    // Download
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "arrow.down.right.circle")
+                                            .foregroundColor(.blue)
+                                            .font(.caption)
+                                        Text("\(String(format: "%.2f", (netPoints.last?.download ?? 0) / 1024)) MB/s")
+                                            .foregroundColor(.white)
+                                            .font(.caption)
+                                    }
+                                    // Upload
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "arrow.up.right.circle")
+                                            .foregroundColor(.green)
+                                            .font(.caption)
+                                        Text("\(String(format: "%.2f", (netPoints.last?.upload ?? 0) / 1024)) MB/s")
+                                            .foregroundColor(.white)
+                                            .font(.caption)
+                                    }
+                                }
                             }
                             NetPanelAppleRefined(
                                 points: netPoints,

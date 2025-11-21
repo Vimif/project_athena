@@ -33,7 +33,7 @@ struct ContentView: View {
                         batteryLevel: viewModel.batteryLevel,
                         batteryState: viewModel.batteryState,
                         batteryStatusText: viewModel.batteryState == .charging ? "En charge" : "Sur batterie",
-                        appleBatteryColor: viewModel.batteryState == .charging ? Color.green : Color.blue
+//                        appleBatteryColor: viewModel.batteryState == .charging ? Color.green : Color.blue
                     )
 
                     NetworkPanelCard(
@@ -49,5 +49,15 @@ struct ContentView: View {
             .navigationTitle("Tableau de bord")
         }
         .preferredColorScheme(.dark)
+    }
+}
+
+// ------ PREVIEW ------
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+            .previewDevice("iPhone 15 Pro")
+            .previewDisplayName("Dashboard Athena - Preview")
     }
 }

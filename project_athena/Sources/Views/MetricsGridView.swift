@@ -1,4 +1,5 @@
 import SwiftUI
+//import Formatting
 
 struct MetricsGridView: View {
     // On récupère un objet stats complet, ou on injecte les valeurs explicitement
@@ -11,9 +12,12 @@ struct MetricsGridView: View {
     let batteryLevel: Float
     let batteryState: UIDevice.BatteryState
     let batteryStatusText: String
-    let appleBatteryColor: Color
     
     var body: some View {
+        
+        let batteryColor = Formatting.appleBatteryColor(level: batteryLevel, state: batteryState)
+        let batteryText = Formatting.batteryStatusText(state: batteryState)
+        
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
             
             // CPU
@@ -66,13 +70,13 @@ struct MetricsGridView: View {
             // Batterie
             StatAppleCard(
                 icon: "battery.100",
-                iconBg: appleBatteryColor,
+                iconBg: batteryColor,
                 title: "Batterie",
-                valueLeft: batteryStatusText,
+                valueLeft: batteryText,
                 valueRight: String(format: "%.0f%%", batteryLevel * 100),
                 percent: Double(batteryLevel),
                 barGradient: LinearGradient(
-                    gradient: Gradient(colors: [appleBatteryColor, Color(.systemGray3)]),
+                    gradient: Gradient(colors: [batteryColor, Color(.systemGray3)]),
                     startPoint: .leading, endPoint: .trailing
                 ),
                 caseColor: Color.cardBackground

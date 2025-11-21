@@ -41,19 +41,11 @@ struct NetworkPanelCard: View {
                     .padding(.horizontal)
 
                 // Graphique réseau
-                Rectangle()
-                    .fill(Color(.systemGray5))
-                    .frame(height: 130)
-                    .overlay(Text("Graphique réseau ici"))
-                // Remplace "Rectangle" par ton propre composant si tu en as un, ex: NetPanelAppleRefined(...)
+                NetworkGraphView(samples: netPoints)
             }
             .padding()
         }
         .background(RoundedRectangle(cornerRadius: 18).fill(Color.graphBackground))
         .padding()
     }
-}
-
-extension Color {
-    static let graphBackground = Color(.systemGray6)
 }

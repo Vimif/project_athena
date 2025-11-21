@@ -10,6 +10,8 @@ import SwiftUI
 extension Color {
     static let cardBackground = Color(.secondarySystemBackground)
     static let graphBackground = Color(.secondarySystemGroupedBackground)
+    static let accentBlue     = Color(.systemBlue)
+    static let accentGreen    = Color(.systemGreen)
 }
 
 struct Constants {

@@ -34,125 +34,7 @@ struct ContentView: View {
                         spacing: 16
                     ) {
                         // CPU Card
-                        StatAppleCard(
-                            icon: "cpu",
-                            iconColor: .white,
-                            iconBg: Color.blue.opacity(0.85),
-                            title: "CPU",
-                            valueLeft: "Syst: 3.2%",
-                            valueRight: String(format: "%.1f%%", cpuFraction * 100),
-                            percent: cpuFraction,
-                            barGradient: LinearGradient(
-                                gradient: Gradient(colors: [Color.blue, Color.cyan]),
-                                startPoint: .leading, endPoint: .trailing
-                            ),
-                            caseColor: .cardBackground
-                        )
-                        // RAM Card
-                        let ramGo = Double(ProcessInfo.processInfo.physicalMemory) / 1024 / 1024 / 1024
-                        let ramUsedGo = ramFraction * ramGo
-                        StatAppleCard(
-                            icon: "memorychip",
-                            iconColor: .white,
-                            iconBg: Color.cyan.opacity(0.85),
-                            title: "RAM",
-                            valueLeft: String(format: "%.2f Go / %.2f Go", ramUsedGo, ramGo),
-                            valueRight: String(format: "%.1f%%", ramFraction * 100),
-                            percent: ramFraction,
-                            barGradient: LinearGradient(
-                                gradient: Gradient(colors: [Color.cyan, Color.blue]),
-                                startPoint: .leading, endPoint: .trailing
-                            ),
-                            caseColor: .cardBackground
-                        )
-                        // Storage Card
-                        let storageTuple = LocalSystemMetrics.storageInfo()
-                        let storageTotal = storageTuple?.total ?? 1.0
-                        let storageUsed = storageTuple != nil ? storageTuple!.total - storageTuple!.free : 0.0
-                        let percentUsed = (storageTotal > 0) ? (storageUsed / storageTotal) : 0
-                        StatAppleCard(
-                            icon: "internaldrive",
-                            iconColor: .white,
-                            iconBg: Color.purple.opacity(0.85),
-                            title: "Stockage",
-                            valueLeft: String(format: "%.1f G/%.1f G", storageUsed, storageTotal),
-                            valueRight: String(format: "%.1f%%", percentUsed * 100),
-                            percent: percentUsed,
-                            barGradient: LinearGradient(
-                                gradient: Gradient(colors: [Color.purple, Color.pink]),
-                                startPoint: .leading, endPoint: .trailing
-                            ),
-                            caseColor: .cardBackground
-                        )
-                        // Battery Card
-                        StatAppleCard(
-                            icon: "battery.100",
-                            iconColor: .white,
-                            iconBg: appleBatteryColor(level: batteryLevel, state: batteryState),
-                            title: "Batterie",
-                            valueLeft: String(format: "%.0f%%", max(0, min(1, batteryLevel)) * 100),
-                            valueRight: "",
-                            percent: Double(max(0, min(batteryLevel, 1))),
-                            barGradient: LinearGradient(
-                                gradient: Gradient(colors: [
-                                    appleBatteryColor(level: batteryLevel, state: batteryState),
-                                    Color(.systemGray3)
-                                ]),
-                                startPoint: .leading, endPoint: .trailing
-                            ),
-                            valueStatus: batteryStatusText(batteryState),
-                            caseColor: .cardBackground
-                        )
-                    }
-                    // MARK: - Network Graph Case
-                    CaseView(caseColor: .graphBackground) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Réseau (KB/s)")
-                                    .font(.headline)
-                                    .foregroundColor(.white) // ou .primary
-                                Spacer()
-                                HStack(spacing: 8) {
-                                    // Download
-                                    HStack(spacing: 2) {
-                                        Image(systemName: "arrow.down.right.circle")
-                                            .foregroundColor(.blue)
-                                            .font(.caption)
-                                        Text("\(String(format: "%.2f", (netPoints.last?.download ?? 0) / 1024)) MB/s")
-                                            .foregroundColor(.white)
-                                            .font(.caption)
-                                    }
-                                    // Upload
-                                    HStack(spacing: 2) {
-                                        Image(systemName: "arrow.up.right.circle")
-                                            .foregroundColor(.green)
-                                            .font(.caption)
-                                        Text("\(String(format: "%.2f", (netPoints.last?.upload ?? 0) / 1024)) MB/s")
-                                            .foregroundColor(.white)
-                                            .font(.caption)
-                                    }
-                                }
-                            }
-                            
-                            Divider()
-                                .background(Color(.secondarySystemFill))
-                                .padding(.horizontal)
-                            
-                            NetPanelAppleRefined(
-                                points: netPoints,
-                                totalDownload: totalDownload,
-                                totalUpload: totalUpload,
-                                maxPoints: 28,
-                                window: 7,
-                                isWiFi: isWiFi
-                            )
-                            .frame(height: 130)
-                        }
-                        .padding()
-                    }
-                }
-                .padding()
-            }
+                    
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Tableau de bord")
         }
@@ -386,15 +268,6 @@ struct NetGraphAppleRefined: View {
 }
 
 // MARK: - Batterie
-
-func batteryStatusText(_ state: UIDevice.BatteryState) -> String {
-    switch state {
-        case .charging:  return "En charge"
-        case .full:      return "Pleine"
-        case .unplugged: return "Sur batterie"
-        default:         return "-"
-    }
-}
 func appleBatteryColor(level: Float, state: UIDevice.BatteryState, lowPower: Bool = ProcessInfo.processInfo.isLowPowerModeEnabled) -> Color {
     if state == .unknown { return Color(.systemGray3) }
     if lowPower { return Color(.systemYellow) }

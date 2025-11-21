@@ -6,3 +6,11 @@
 //
 
 import Foundation
+
+struct SystemStats {
+    var cpuFraction: Double
+    var ramFraction: Double
+    var storageFraction: Double
+    var batteryFraction: Double
+    var batteryStatus: String
+}

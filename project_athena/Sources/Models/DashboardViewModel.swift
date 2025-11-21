@@ -5,19 +5,14 @@
 //  Created by Thomas Boisaubert on 20/11/2025.
 //
 
+import Foundation
+import Combine
+
 class DashboardViewModel: ObservableObject {
     @Published var stats: [SystemStats]
     @Published var networkStat: NetworkStats
     
     // Fonctions utilitaires dynamiques (identiques à celles déjà données)
-    func getDeviceModel() -> String {
-        var systemInfo = utsname()
-        uname(&systemInfo)
-        let data = Data(bytes: &systemInfo.machine, count: Int(MemoryLayout.size(ofValue: systemInfo.machine)))
-        let model = String(data: data, encoding: .ascii)?
-            .trimmingCharacters(in: .controlCharacters) ?? "N/A"
-        return model
-    }
     func getChipModel(model: String) -> String {
         let mapping: [String: String] = [
             "iPhone18,2": "A19 Pro",
@@ -45,14 +40,6 @@ class DashboardViewModel: ObservableObject {
         let minutes = (Int(uptime) % 3600) / 60
         let seconds = Int(uptime) % 60
         return "\(hours)h \(minutes)m \(seconds)s"
-    }
-    func getLastBootString() -> String {
-        let interval = ProcessInfo.processInfo.systemUptime
-        let bootDate = Date().addingTimeInterval(-interval)
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .medium
-        return formatter.string(from: bootDate)
     }
     func refreshStats() {
         DispatchQueue.global().async {

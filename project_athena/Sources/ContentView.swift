@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject var viewModel = DashboardViewModel() // Ton ViewModel central
+    @StateObject var viewModel = DashboardViewModel()
 
     var body: some View {
         NavigationView {
@@ -19,24 +19,26 @@ struct ContentView: View {
                         lastReboot: DeviceUtils.lastBootDateString()
                     )
                     
-                    // Grille stat CPU/RAM/Stockage/Batterie
+                    // ------ Calcul stockage en Go ------
+                    let totalDiskSpace = viewModel.getTotalDiskSpaceDouble()
+                    let usedDiskSpace = viewModel.storageFraction * totalDiskSpace
+
                     MetricsGridView(
                         cpuFraction: viewModel.cpuFraction,
                         ramFraction: viewModel.ramFraction,
                         ramGo: Double(ProcessInfo.processInfo.physicalMemory)/1024/1024/1024,
-                        storageUsed: $viewModel.storageFraction * $viewModel.getTotalDiskSpaceDouble, // Adapte getTotalDiskSpaceDouble()
-                        storageTotal: viewModel.getTotalDiskSpaceDouble(),
-                        percentUsed: $viewModel.storageFraction,
+                        storageUsed: usedDiskSpace,
+                        storageTotal: totalDiskSpace,
+                        percentUsed: viewModel.storageFraction,
                         batteryLevel: viewModel.batteryLevel,
                         batteryState: viewModel.batteryState,
                         batteryStatusText: viewModel.batteryState == .charging ? "En charge" : "Sur batterie",
                         appleBatteryColor: viewModel.batteryState == .charging ? Color.green : Color.blue
                     )
-                    
-                    // Carte réseau
+
                     NetworkPanelCard(
                         netPoints: viewModel.networkSamples,
-                        totalDownload: Double(viewModel.networkStat.received)/1024/1024, // conversion bytes→Mo
+                        totalDownload: Double(viewModel.networkStat.received)/1024/1024,
                         totalUpload: Double(viewModel.networkStat.sent)/1024/1024,
                         isWiFi: viewModel.isWiFi
                     )
@@ -49,9 +51,3 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
     }
 }
-
-Preview {
-    ContentView()
-}
-// Optionnel : méthode utilitaire pour stockage en Go dans ViewModel
-// func getTotalDiskSpaceDouble() -> Double { /* ... retourne le total en Go */ }

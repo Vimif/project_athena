@@ -6,13 +6,27 @@
 //
 
 import Foundation
+import Network
+import UIKit
 import Combine
 
+enum NetworkType {
+    case wifi, cellular, none
+}
+
 class DashboardViewModel: ObservableObject {
-    @Published var stats: [SystemStats]
-    @Published var networkStat: NetworkStats
+    // MARK: - Metrics (ajouter ici toutes les fraactions que tu utilises)
+    @Published var stats: [SystemStats] = []
+    @Published var networkStat: AppNetworkUsage = AppNetworkUsage(sent: 0, received: 0)
+
+    // Pour compatibilité avec toutes les Views
+    @Published var ramFraction: Double = 0.0         // Correction !
+    @Published var cpuFraction: Double = 0.0
+    @Published var batteryLevel: Float = 0.0
+    @Published var batteryState: UIDevice.BatteryState = .unknown
+    @Published var isWiFi: Bool = false              // Correction !
     
-    // Fonctions utilitaires dynamiques (identiques à celles déjà données)
+    // MARK: - Fonctions utilitaires dynamiques (correctes et typées)
     func getChipModel(model: String) -> String {
         let mapping: [String: String] = [
             "iPhone18,2": "A19 Pro",
@@ -30,7 +44,7 @@ class DashboardViewModel: ObservableObject {
         if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
            let total = attrs[.systemSize] as? Double {
             let gb = total/1024/1024/1024
-            return String(format: "%.1f G", gb)
+            return String(format: "%.1f GB", gb)
         }
         return "N/A"
     }
@@ -41,10 +55,13 @@ class DashboardViewModel: ObservableObject {
         let seconds = Int(uptime) % 60
         return "\(hours)h \(minutes)m \(seconds)s"
     }
+    
+    // MARK: - Refresh/Mise à jour background
     func refreshStats() {
         DispatchQueue.global().async {
-            let ram = min(max(LocalSystemMetrics.ramUsedFraction(), 0), 1)
-            let cpu = min(max(LocalSystemMetrics.cpuUsageFraction(), 0), 1)
+            // Remplace LocalSystemMetrics par tes Utils ! (SystemMetrics.swift)
+            let ram = min(max(SystemMetrics.ramUsedFraction(), 0), 1)
+            let cpu = min(max(SystemMetrics.cpuUsageFraction(), 0), 1)
             let level = UIDevice.current.batteryLevel
             let state = UIDevice.current.batteryState
             DispatchQueue.main.async {
@@ -55,6 +72,7 @@ class DashboardViewModel: ObservableObject {
             }
         }
     }
+    
     func refreshNetworkType() {
         getCurrentNetworkType { type in
             DispatchQueue.main.async {
@@ -62,6 +80,7 @@ class DashboardViewModel: ObservableObject {
             }
         }
     }
+    
     func getCurrentNetworkType(completion: @escaping (NetworkType) -> Void) {
         let monitor = NWPathMonitor()
         let queue = DispatchQueue(label: "Monitor")
@@ -71,10 +90,14 @@ class DashboardViewModel: ObservableObject {
                 completion(.wifi)
             } else if path.usesInterfaceType(.cellular) {
                 completion(.cellular)
+            } else {
+                completion(.none)
             }
         }
         monitor.start(queue: queue)
     }
+    
+    // MARK: - Stat réseau bas niveau
     func getNetworkUsage() -> AppNetworkUsage {
         var sent: UInt64 = 0
         var received: UInt64 = 0
@@ -96,5 +119,9 @@ class DashboardViewModel: ObservableObject {
         return AppNetworkUsage(sent: sent, received: received)
     }
 
+    // Appelle refresh dans ton init ou cycle background
+    init() {
+        refreshStats()
+        refreshNetworkType()
+    }
 }
-

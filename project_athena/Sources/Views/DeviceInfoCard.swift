@@ -8,18 +8,18 @@
 import SwiftUI
 
 struct DeviceInfoCard: View {
-    var deviceName: String { UIDevice.current.name }
-    var iosVersion: String { "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)" }
-    var model: String { getDeviceModel() }
-    var chip: String { getChipModel(model: model) }
-    var memory: String { getTotalMemory() }
-    var storage: String { getTotalDiskSpace() }
-    var uptime: String { getUptimeString() }
-    var lastReboot: String { getLastBootString() }
-    
+    let deviceName: String
+    let iosVersion: String
+    let model: String
+    let chip: String
+    let memory: String
+    let storage: String
+    let uptime: String
+    let lastReboot: String
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 15) {
+            HStack(spacing: 15) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(Color.blue.opacity(0.18))
@@ -30,7 +30,7 @@ struct DeviceInfoCard: View {
                         .frame(width: 33, height: 35)
                         .foregroundColor(.blue)
                 }
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(deviceName)
                         .font(.system(size: 23, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
@@ -42,7 +42,6 @@ struct DeviceInfoCard: View {
                 }
                 Spacer()
             }
-            // Grille 2 colonnes, bien espacée
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 17) {
                 infoRow(label: "Modèle", value: model)
                 infoRow(label: "Stockage", value: storage)
@@ -61,7 +60,6 @@ struct DeviceInfoCard: View {
         .shadow(color: Color.black.opacity(0.11), radius: 15, x: 0, y: 8)
         .padding(.horizontal, 6)
     }
-    // Ligne info style Apple
     func infoRow(label: String, value: String) -> some View {
         HStack {
             Text(label)

@@ -1,25 +1,18 @@
-//
-//  NetworkPanelCard.swift
-//  project_athena
-//
-//  Created by Thomas Boisaubert on 20/11/2025.
-//
-
 import SwiftUI
 
-struct NetworkCard: View {
+struct NetworkPanelCard: View {
     let netPoints: [NetworkSample]
     let totalDownload: Double
     let totalUpload: Double
     let isWiFi: Bool
 
     var body: some View {
-        CaseView(caseColor: .graphBackground) {
+        VStack {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Réseau (KB/s)")
                         .font(.headline)
-                        .foregroundColor(.white) // ou .primary
+                        .foregroundColor(.white)
                     Spacer()
                     HStack(spacing: 8) {
                         // Download
@@ -42,23 +35,25 @@ struct NetworkCard: View {
                         }
                     }
                 }
-                
+
                 Divider()
                     .background(Color(.secondarySystemFill))
                     .padding(.horizontal)
-                
-                NetPanelAppleRefined(
-                    points: netPoints,
-                    totalDownload: totalDownload,
-                    totalUpload: totalUpload,
-                    maxPoints: 28,
-                    window: 7,
-                    isWiFi: isWiFi
-                )
-                .frame(height: 130)
+
+                // Graphique réseau
+                Rectangle()
+                    .fill(Color(.systemGray5))
+                    .frame(height: 130)
+                    .overlay(Text("Graphique réseau ici"))
+                // Remplace "Rectangle" par ton propre composant si tu en as un, ex: NetPanelAppleRefined(...)
             }
             .padding()
         }
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color.graphBackground))
+        .padding()
     }
-    .padding()
+}
+
+extension Color {
+    static let graphBackground = Color(.systemGray6)
 }

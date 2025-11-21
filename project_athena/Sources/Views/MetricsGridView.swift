@@ -1,53 +1,57 @@
-//
-//  MetricsGridView.swift
-//  project_athena
-//
-//  Created by Thomas Boisaubert on 20/11/2025.
-//
-
 import SwiftUI
 
-let ramGo = Double(ProcessInfo.processInfo.physicalMemory) / 1024 / 1024 / 1024
-let ramUsedGo = ramFraction * ramGo
-let storageTuple = LocalSystemMetrics.storageInfo()
-let storageTotal = storageTuple?.total ?? 1.0
-let storageUsed = storageTuple != nil ? storageTuple!.total - storageTuple!.free : 0.0
-let percentUsed = (storageTotal > 0) ? (storageUsed / storageTotal) : 0
-
 struct MetricsGridView: View {
-    let stats: SystemStats
+    // On récupère un objet stats complet, ou on injecte les valeurs explicitement
+    let cpuFraction: Double
+    let ramFraction: Double
+    let ramGo: Double
+    let storageUsed: Double
+    let storageTotal: Double
+    let percentUsed: Double
+    let batteryLevel: Float
+    let batteryState: UIDevice.BatteryState
+    let batteryStatusText: String
+    let appleBatteryColor: Color
+    
     var body: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+            
+            // CPU
             StatAppleCard(
                 icon: "cpu",
-                iconColor: .white,
-                iconBg: Color.blue.opacity(0.85),
+                iconBg: Color.blue,
                 title: "CPU",
-                valueLeft: "Syst: 3.2%",
+                valueLeft: "",
                 valueRight: String(format: "%.1f%%", cpuFraction * 100),
                 percent: cpuFraction,
                 barGradient: LinearGradient(
                     gradient: Gradient(colors: [Color.blue, Color.cyan]),
-                    startPoint: .leading, endPoint: .trailing
+                    startPoint: .leading,
+                    endPoint: .trailing
                 ),
-                caseColor: .cardBackground) // CPU
+                caseColor: Color.cardBackground
+            )
+
+            
+            // RAM
             StatAppleCard(
                 icon: "memorychip",
-                iconColor: .white,
-                iconBg: Color.cyan.opacity(0.85),
+                iconBg: Color.white,
                 title: "RAM",
-                valueLeft: String(format: "%.2f Go / %.2f Go", ramUsedGo, ramGo),
+                valueLeft: String(format: "%.2f Go / %.2f Go", ramFraction * ramGo, ramGo),
                 valueRight: String(format: "%.1f%%", ramFraction * 100),
                 percent: ramFraction,
                 barGradient: LinearGradient(
                     gradient: Gradient(colors: [Color.cyan, Color.blue]),
                     startPoint: .leading, endPoint: .trailing
                 ),
-                caseColor: .cardBackground) // RAM
+                caseColor: Color.cardBackground
+            )
+
+            // Stockage
             StatAppleCard(
                 icon: "internaldrive",
-                iconColor: .white,
-                iconBg: Color.purple.opacity(0.85),
+                iconBg: Color.white,
                 title: "Stockage",
                 valueLeft: String(format: "%.1f G/%.1f G", storageUsed, storageTotal),
                 valueRight: String(format: "%.1f%%", percentUsed * 100),
@@ -56,24 +60,24 @@ struct MetricsGridView: View {
                     gradient: Gradient(colors: [Color.purple, Color.pink]),
                     startPoint: .leading, endPoint: .trailing
                 ),
-                caseColor: .cardBackground) // Stockage
+                caseColor: Color.cardBackground
+            )
+            
+            // Batterie
             StatAppleCard(
                 icon: "battery.100",
-                iconColor: .white,
-                iconBg: appleBatteryColor(level: batteryLevel, state: batteryState),
+                iconBg: appleBatteryColor,
                 title: "Batterie",
-                valueLeft: String(format: "%.0f%%", max(0, min(1, batteryLevel)) * 100),
-                valueRight: "",
-                percent: Double(max(0, min(batteryLevel, 1))),
+                valueLeft: batteryStatusText,
+                valueRight: String(format: "%.0f%%", batteryLevel * 100),
+                percent: Double(batteryLevel),
                 barGradient: LinearGradient(
-                    gradient: Gradient(colors: [
-                        appleBatteryColor(level: batteryLevel, state: batteryState),
-                        Color(.systemGray3)
-                    ]),
+                    gradient: Gradient(colors: [appleBatteryColor, Color(.systemGray3)]),
                     startPoint: .leading, endPoint: .trailing
                 ),
-                valueStatus: batteryStatusText(batteryState),
-                caseColor: .cardBackground) // Batterie
+                caseColor: Color.cardBackground
+            )
+
         }
     }
 }

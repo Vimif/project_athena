@@ -14,4 +14,6 @@ struct Formatting {
     static func formatPercent(_ value: Double) -> String {
         String(format: "%.1f%%", value * 100)
     }
+    let color = BatteryUtils.appleBatteryColor(level: batteryLevel, state: batteryState)
+    let statusText = BatteryUtils.batteryStatusText(state: batteryState)
 }

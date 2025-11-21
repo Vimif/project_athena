@@ -9,69 +9,53 @@ import SwiftUI
 
 struct StatAppleCard: View {
     let icon: String
-    let iconColor: Color
     let iconBg: Color
     let title: String
     let valueLeft: String
     let valueRight: String
     let percent: Double
     let barGradient: LinearGradient
-    var valueStatus: String? = nil
-    var caseColor: Color = Color(.systemBackground)
+    let caseColor: Color
 
     var body: some View {
-        CaseView(caseColor: caseColor) {
-            VStack(alignment: .leading, spacing: 10) {
-                // En-tête icône + titre
-                HStack(spacing: 10) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(iconBg)
-                            .frame(width: 30, height: 30)
-                        Image(systemName: icon)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(iconColor)
-                    }
-                    Text(title)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Spacer()
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(iconBg)
+                        .frame(width: 30, height: 30)
+                    Image(systemName: icon)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
                 }
-                // Barre de progression TOUJOURS au-dessus
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color(.tertiarySystemFill))
-                            .frame(height: 8)
-                        Capsule()
-                            .fill(barGradient)
-                            .frame(width: geometry.size.width * CGFloat(max(min(percent, 1), 0)), height: 8)
-                    }
-                }
-                .frame(height: 8)
-                // Bloc statistiques ou status
-                if let valueStatus = valueStatus {
-                    HStack {
-                        Text(valueStatus)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(valueLeft)
-                            .font(.subheadline)
-                            .foregroundColor(iconBg)
-                    }
-                } else {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(valueLeft)
-                            .font(.caption)
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Text(valueRight)
-                            .font(.caption)
-                            .foregroundColor(.primary)
-                    }
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color(.tertiarySystemFill))
+                        .frame(height: 8)
+                    Capsule()
+                        .fill(barGradient)
+                        .frame(width: geometry.size.width * CGFloat(max(min(percent, 1), 0)), height: 8)
                 }
             }
+            .frame(height: 8)
+            HStack {
+                Text(valueLeft)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text(valueRight)
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+            }
         }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.cardBackground))
+        .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 3)
     }
 }

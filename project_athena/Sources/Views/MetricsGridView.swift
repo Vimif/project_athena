@@ -22,7 +22,7 @@ struct MetricsGridView: View {
         let batteryColor = Formatting.appleBatteryColor(level: batteryLevel, state: batteryState)
         let batteryText = Formatting.batteryStatusText(state: batteryState)
         
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             
             // CPU
             StatAppleCard(
@@ -30,7 +30,7 @@ struct MetricsGridView: View {
                 iconBg: Color.blue,
                 title: "CPU",
                 valueLeft: "",
-                valueRight: String(format: "%.1f%%", cpuFraction * 100),
+                valueRight: String(format: "%.0f%%", cpuFraction * 100),
                 percent: cpuFraction,
                 barGradient: LinearGradient(
                     gradient: Gradient(colors: [Color.blue, Color.cyan]),
@@ -43,13 +43,13 @@ struct MetricsGridView: View {
             // RAM
             StatAppleCard(
                 icon: "memorychip",
-                iconBg: Color.white,
+                iconBg: Color.purple,
                 title: "RAM",
-                valueLeft: String(format: "%.2f Go / %.2f Go", ramFraction * ramGo, ramGo),
-                valueRight: String(format: "%.1f%%", ramFraction * 100),
+                valueLeft: String(format: "%.1f Go / %.1f Go", ramFraction * ramGo, ramGo),
+                valueRight: String(format: "%.0f%%", ramFraction * 100),
                 percent: ramFraction,
                 barGradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.cyan, Color.blue]),
+                    gradient: Gradient(colors: [Color.purple, Color.pink]),
                     startPoint: .leading,
                     endPoint: .trailing
                 ),
@@ -59,13 +59,13 @@ struct MetricsGridView: View {
             // Stockage
             StatAppleCard(
                 icon: "internaldrive",
-                iconBg: Color.white,
+                iconBg: Color.orange,
                 title: "Stockage",
-                valueLeft: String(format: "%.1f G/%.1f G", storageUsed, storageTotal),
-                valueRight: String(format: "%.1f%%", percentUsed * 100),
+                valueLeft: String(format: "%.1f Go / %.1f Go", storageUsed, storageTotal),
+                valueRight: String(format: "%.0f%%", percentUsed * 100),
                 percent: percentUsed,
                 barGradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.purple, Color.pink]),
+                    gradient: Gradient(colors: [Color.orange, Color.red]),
                     startPoint: .leading,
                     endPoint: .trailing
                 ),
@@ -74,19 +74,38 @@ struct MetricsGridView: View {
             
             // Batterie
             StatAppleCard(
-                icon: "battery.100percent",
+                icon: batteryIconName(for: batteryLevel, state: batteryState),
                 iconBg: batteryColor,
                 title: "Batterie",
                 valueLeft: batteryText,
                 valueRight: String(format: "%.0f%%", batteryLevel * 100),
                 percent: Double(batteryLevel),
                 barGradient: LinearGradient(
-                    gradient: Gradient(colors: [batteryColor, Color(.systemGray3)]),
+                    gradient: Gradient(colors: [batteryColor, batteryColor.opacity(0.6)]),
                     startPoint: .leading,
                     endPoint: .trailing
                 ),
                 caseColor: Color.cardBackground
             )
+        }
+        .padding(.horizontal, 6)
+    }
+    
+    // MARK: - Helper pour l'icône de batterie
+    
+    private func batteryIconName(for level: Float, state: UIDevice.BatteryState) -> String {
+        if state == .charging {
+            return "bolt.fill"
+        }
+        
+        if level >= 0.75 {
+            return "battery.100percent"
+        } else if level >= 0.5 {
+            return "battery.75percent"
+        } else if level >= 0.25 {
+            return "battery.50percent"
+        } else {
+            return "battery.25percent"
         }
     }
 }

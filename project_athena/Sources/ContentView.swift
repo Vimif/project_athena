@@ -5,8 +5,8 @@ struct ContentView: View {
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 16) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
                     // Carte infos device
                     DeviceInfoCard(
                         deviceName: DeviceUtils.deviceName(),
@@ -19,10 +19,7 @@ struct ContentView: View {
                         lastReboot: DeviceUtils.lastBootDateString()
                     )
                     
-                    // ------ Calcul stockage en Go ------
-                    let totalDiskSpace = viewModel.getTotalDiskSpaceDouble()
-                    let usedDiskSpace = viewModel.storageFraction * totalDiskSpace
-
+                    // Grille de métriques
                     MetricsGridView(
                         cpuFraction: viewModel.cpuFraction,
                         ramFraction: viewModel.ramFraction,
@@ -35,6 +32,7 @@ struct ContentView: View {
                         batteryStatusText: viewModel.batteryState == .charging ? "En charge" : "Sur batterie"
                     )
 
+                    // Panneau réseau
                     NetworkPanelCard(
                         netPoints: viewModel.networkSamples,
                         totalDownload: Double(viewModel.networkStat.received) / 1024 / 1024,
@@ -42,16 +40,18 @@ struct ContentView: View {
                         isWiFi: viewModel.isWiFi
                     )
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 20)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Tableau de bord")
+            .navigationBarTitleDisplayMode(.large)
         }
         .preferredColorScheme(.dark)
     }
 }
 
-// ------ PREVIEW ------
+// MARK: - Preview
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {

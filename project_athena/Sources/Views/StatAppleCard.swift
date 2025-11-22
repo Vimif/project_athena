@@ -18,44 +18,69 @@ struct StatAppleCard: View {
     let caseColor: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
+            // En-tête avec icône et titre
             HStack(spacing: 10) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(iconBg)
-                        .frame(width: 30, height: 30)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(iconBg.opacity(0.15))
+                        .frame(width: 36, height: 36)
+                    
                     Image(systemName: icon)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.white)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(iconBg)
                 }
+                
                 Text(title)
-                    .font(.headline)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
+                
                 Spacer()
             }
+            
+            // Valeur principale (droite) en grand
+            Text(valueRight)
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+                .monospacedDigit()
+            
+            // Barre de progression avec gradient
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
+                    // Fond de la barre
                     Capsule()
                         .fill(Color(.tertiarySystemFill))
-                        .frame(height: 8)
+                        .frame(height: 6)
+                    
+                    // Barre de progression
                     Capsule()
                         .fill(barGradient)
-                        .frame(width: geometry.size.width * CGFloat(max(min(percent, 1), 0)), height: 8)
+                        .frame(
+                            width: geometry.size.width * CGFloat(max(min(percent, 1), 0)),
+                            height: 6
+                        )
+                        .shadow(color: barGradient.stops.first?.color.opacity(0.3) ?? .clear, radius: 2, x: 0, y: 1)
                 }
             }
-            .frame(height: 8)
-            HStack {
+            .frame(height: 6)
+            
+            // Valeur secondaire (gauche)
+            if !valueLeft.isEmpty {
                 Text(valueLeft)
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundColor(.secondary)
-                Spacer()
-                Text(valueRight)
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .lineLimit(1)
             }
         }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.cardBackground))
-        .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 3)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }

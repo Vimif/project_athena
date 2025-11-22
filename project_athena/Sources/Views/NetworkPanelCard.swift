@@ -10,7 +10,7 @@ struct NetworkPanelCard: View {
         VStack {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Réseau (KB/s)")
+                    Text("Réseau")
                         .font(.headline)
                         .foregroundColor(.white)
                     Spacer()

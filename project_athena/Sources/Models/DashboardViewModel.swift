@@ -60,6 +60,7 @@ class DashboardViewModel: ObservableObject {
         refreshStats()
         refreshNetwork()
         refreshNetworkType()
+        updateWidgetData() // AJOUTER CETTE LIGNE
     }
     
     private func refreshNetwork() {
@@ -213,5 +214,31 @@ class DashboardViewModel: ObservableObject {
     deinit {
         timer?.invalidate()
         timer = nil
+    }
+    // MARK: - Widget Data Update
+
+    private func updateWidgetData() {
+        let widgetData = WidgetData(
+            cpuUsage: cpuFraction,
+            ramUsage: ramFraction,
+            storageUsage: storageFraction,
+            batteryLevel: batteryLevel,
+            batteryState: batteryStateString(batteryState),
+            networkDownload: networkSamples.last?.download ?? 0,
+            networkUpload: networkSamples.last?.upload ?? 0,
+            isWiFi: isWiFi,
+            timestamp: Date()
+        )
+        
+        WidgetDataService.shared.saveWidgetData(widgetData)
+    }
+
+    private func batteryStateString(_ state: UIDevice.BatteryState) -> String {
+        switch state {
+        case .charging: return "charging"
+        case .full: return "full"
+        case .unplugged: return "unplugged"
+        default: return "unknown"
+        }
     }
 }

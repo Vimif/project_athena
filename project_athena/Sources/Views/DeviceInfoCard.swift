@@ -18,64 +18,38 @@ struct DeviceInfoCard: View {
     let lastReboot: String
 
     var body: some View {
-        VStack(spacing: 0) {
-            // En-tête de l'appareil
-            headerView
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-            
-            Divider()
-                .background(Color(.separator))
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-            
-            // Grille d'informations
-            infoGridView
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
+        CardContainer(padding: 0) {
+            VStack(spacing: 0) {
+                // En-tête
+                headerView
+                    .padding(.horizontal, DesignSystem.spacing20)
+                    .padding(.top, DesignSystem.spacing20)
+                
+                Divider()
+                    .background(Color(.separator))
+                    .padding(.horizontal, DesignSystem.spacing20)
+                    .padding(.vertical, DesignSystem.spacing16)
+                
+                // Grille d'informations
+                infoGridView
+                    .padding(.horizontal, DesignSystem.spacing20)
+                    .padding(.bottom, DesignSystem.spacing20)
+            }
         }
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
-        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
         .padding(.horizontal, 6)
     }
     
     // MARK: - En-tête
     
     private var headerView: some View {
-        HStack(spacing: 15) {
-            // Icône de l'appareil
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.blue.opacity(0.2),
-                                Color.blue.opacity(0.1)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 56, height: 56)
-                
-                Image(systemName: "iphone.gen3")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 32, height: 36)
-                    .foregroundStyle(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.7)]),
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-            }
+        HStack(spacing: DesignSystem.spacing16) {
+            IconContainer(
+                icon: "iphone.gen3",
+                color: .blue,
+                size: DesignSystem.iconSizeLarge
+            )
             
-            // Nom et version
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DesignSystem.spacing4) {
                 Text(deviceName)
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
@@ -99,82 +73,37 @@ struct DeviceInfoCard: View {
     // MARK: - Grille d'informations
     
     private var infoGridView: some View {
-        VStack(spacing: 12) {
-            // Ligne 1
-            HStack(spacing: 12) {
-                InfoItem(
-                    icon: "cpu",
-                    iconColor: .blue,
-                    label: "Puce",
-                    value: chip
-                )
-                
-                InfoItem(
-                    icon: "memorychip",
-                    iconColor: .purple,
-                    label: "Modèle",
-                    value: model
-                )
+        VStack(spacing: DesignSystem.spacing12) {
+            HStack(spacing: DesignSystem.spacing12) {
+                InfoCell(icon: "cpu", color: .blue, label: "Puce", value: chip)
+                InfoCell(icon: "memorychip", color: .purple, label: "Modèle", value: model)
             }
             
-            // Ligne 2
-            HStack(spacing: 12) {
-                InfoItem(
-                    icon: "memorychip.fill",
-                    iconColor: .orange,
-                    label: "Mémoire",
-                    value: memory
-                )
-                
-                InfoItem(
-                    icon: "internaldrive",
-                    iconColor: .pink,
-                    label: "Stockage",
-                    value: storage
-                )
+            HStack(spacing: DesignSystem.spacing12) {
+                InfoCell(icon: "memorychip.fill", color: .orange, label: "Mémoire", value: memory)
+                InfoCell(icon: "internaldrive", color: .pink, label: "Stockage", value: storage)
             }
             
-            // Ligne 3
-            HStack(spacing: 12) {
-                InfoItem(
-                    icon: "clock",
-                    iconColor: .green,
-                    label: "Temps de fonctionnement",
-                    value: uptime
-                )
-                
-                InfoItem(
-                    icon: "arrow.clockwise",
-                    iconColor: .cyan,
-                    label: "Dernier redémarrage",
-                    value: lastReboot
-                )
+            HStack(spacing: DesignSystem.spacing12) {
+                InfoCell(icon: "clock", color: .green, label: "Uptime", value: uptime)
+                InfoCell(icon: "arrow.clockwise", color: .cyan, label: "Redémarrage", value: lastReboot)
             }
         }
     }
 }
 
-// MARK: - Composant InfoItem
+// MARK: - InfoCell Component
 
-struct InfoItem: View {
+struct InfoCell: View {
     let icon: String
-    let iconColor: Color
+    let color: Color
     let label: String
     let value: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Icône avec fond
-            HStack(spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(iconColor.opacity(0.15))
-                        .frame(width: 28, height: 28)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(iconColor)
-                }
+        VStack(alignment: .leading, spacing: DesignSystem.spacing8) {
+            HStack(spacing: DesignSystem.spacing8) {
+                IconContainer(icon: icon, color: color, size: DesignSystem.iconSizeSmall)
                 
                 Text(label)
                     .font(.caption)
@@ -182,7 +111,6 @@ struct InfoItem: View {
                     .lineLimit(1)
             }
             
-            // Valeur
             Text(value)
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundColor(.primary)
@@ -190,9 +118,9 @@ struct InfoItem: View {
                 .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(DesignSystem.spacing12)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: DesignSystem.cornerRadiusSmall, style: .continuous)
                 .fill(Color(.tertiarySystemBackground))
         )
     }

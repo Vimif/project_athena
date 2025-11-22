@@ -18,18 +18,10 @@ struct StatAppleCard: View {
     let caseColor: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // En-tête avec icône et titre
-            HStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(iconBg.opacity(0.15))
-                        .frame(width: 36, height: 36)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(iconBg)
-                }
+        VStack(alignment: .leading, spacing: 0) {
+            // En-tête (hauteur fixe)
+            HStack(spacing: DesignSystem.spacing8) {
+                IconContainer(icon: icon, color: iconBg, size: DesignSystem.iconSizeMedium)
                 
                 Text(title)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -37,50 +29,58 @@ struct StatAppleCard: View {
                 
                 Spacer()
             }
+            .frame(height: 36)
             
-            // Valeur principale (droite) en grand
+            Spacer()
+            
+            // Valeur principale (hauteur fixe)
             Text(valueRight)
                 .font(.system(size: 32, weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
                 .monospacedDigit()
+                .frame(height: 40)
             
-            // Barre de progression avec gradient
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Fond de la barre
-                    Capsule()
-                        .fill(Color(.tertiarySystemFill))
-                        .frame(height: 6)
-                    
-                    // Barre de progression
-                    Capsule()
-                        .fill(barGradient)
-                        .frame(
-                            width: geometry.size.width * CGFloat(max(min(percent, 1), 0)),
-                            height: 6
-                        )
-                        .shadow(color: iconBg.opacity(0.3), radius: 2, x: 0, y: 1)
-                }
-            }
-            .frame(height: 6)
+            Spacer()
             
-            // Valeur secondaire (gauche)
-            if !valueLeft.isEmpty {
-                Text(valueLeft)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
+            // Barre de progression (hauteur fixe)
+            progressBar
+                .frame(height: 6)
+            
+            Spacer()
+            
+            // Valeur secondaire (hauteur fixe)
+            Text(valueLeft.isEmpty ? " " : valueLeft)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .frame(height: 16)
         }
-        .padding(16)
+        .padding(DesignSystem.spacing16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+            RoundedRectangle(cornerRadius: DesignSystem.cornerRadiusMedium, style: .continuous)
+                .fill(Color.cardBackground)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: DesignSystem.cornerRadiusMedium, style: .continuous)
+                .strokeBorder(Color.cardBorder, lineWidth: 0.5)
         )
         .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+    }
+    
+    private var progressBar: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                // Fond
+                Capsule()
+                    .fill(Color(.tertiarySystemFill))
+                
+                // Progression
+                Capsule()
+                    .fill(barGradient)
+                    .frame(width: geometry.size.width * CGFloat(max(min(percent, 1), 0)))
+                    .shadow(color: iconBg.opacity(0.3), radius: 2, x: 0, y: 1)
+            }
+        }
     }
 }

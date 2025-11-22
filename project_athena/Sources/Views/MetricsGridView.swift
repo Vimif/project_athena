@@ -22,8 +22,13 @@ struct MetricsGridView: View {
         let batteryColor = Formatting.appleBatteryColor(level: batteryLevel, state: batteryState)
         let batteryText = Formatting.batteryStatusText(state: batteryState)
         
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: DesignSystem.spacing12),
+                GridItem(.flexible(), spacing: DesignSystem.spacing12)
+            ],
+            spacing: DesignSystem.spacing12
+        ) {
             // CPU
             StatAppleCard(
                 icon: "cpu",
@@ -39,13 +44,14 @@ struct MetricsGridView: View {
                 ),
                 caseColor: Color.cardBackground
             )
+            .frame(height: 170)
             
             // RAM
             StatAppleCard(
                 icon: "memorychip",
                 iconBg: Color.purple,
                 title: "RAM",
-                valueLeft: String(format: "%.1f Go / %.1f Go", ramFraction * ramGo, ramGo),
+                valueLeft: String(format: "%.1f / %.1f Go", ramFraction * ramGo, ramGo),
                 valueRight: String(format: "%.0f%%", ramFraction * 100),
                 percent: ramFraction,
                 barGradient: LinearGradient(
@@ -55,13 +61,14 @@ struct MetricsGridView: View {
                 ),
                 caseColor: Color.cardBackground
             )
+            .frame(height: 170)
 
             // Stockage
             StatAppleCard(
                 icon: "internaldrive",
                 iconBg: Color.orange,
                 title: "Stockage",
-                valueLeft: String(format: "%.1f Go / %.1f Go", storageUsed, storageTotal),
+                valueLeft: String(format: "%.1f / %.1f Go", storageUsed, storageTotal),
                 valueRight: String(format: "%.0f%%", percentUsed * 100),
                 percent: percentUsed,
                 barGradient: LinearGradient(
@@ -71,6 +78,7 @@ struct MetricsGridView: View {
                 ),
                 caseColor: Color.cardBackground
             )
+            .frame(height: 170)
             
             // Batterie
             StatAppleCard(
@@ -87,6 +95,7 @@ struct MetricsGridView: View {
                 ),
                 caseColor: Color.cardBackground
             )
+            .frame(height: 170)
         }
         .padding(.horizontal, 6)
     }

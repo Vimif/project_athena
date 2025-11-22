@@ -63,6 +63,7 @@ struct MetricsGridView: View {
                 barGradient: LinearGradient(
                     gradient: Gradient(colors: [Color.purple, Color.pink]),
                     startPoint: .leading, endPoint: .trailing
+                
                 ),
                 caseColor: Color.cardBackground
             )

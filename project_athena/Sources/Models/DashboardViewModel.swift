@@ -102,19 +102,11 @@ class DashboardViewModel: ObservableObject {
     
     // MARK: - Refresh/Mise à jour background
     func refreshStats() {
-        DispatchQueue.global().async {
-            // Remplace LocalSystemMetrics par tes Utils ! (SystemMetrics.swift)
-            let ram = min(max(SystemMetrics.ramUsedFraction(), 0), 1)
-            let cpu = min(max(SystemMetrics.cpuUsageFraction(), 0), 1)
-            let level = UIDevice.current.batteryLevel
-            let state = UIDevice.current.batteryState
-            DispatchQueue.main.async {
-                self.ramFraction = ram
-                self.cpuFraction = cpu
-                self.batteryLevel = level
-                self.batteryState = state
-            }
-        }
+        self.ramFraction = SystemMetrics.ramUsedFraction()
+        self.cpuFraction = SystemMetrics.cpuUsageFraction()
+        self.storageFraction = SystemMetrics.storageFraction()
+        self.batteryLevel = UIDevice.current.batteryLevel
+        self.batteryState = UIDevice.current.batteryState
     }
     
     func refreshNetworkType() {

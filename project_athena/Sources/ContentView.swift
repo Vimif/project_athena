@@ -24,16 +24,15 @@ struct ContentView: View {
                     let usedDiskSpace = viewModel.storageFraction * totalDiskSpace
 
                     MetricsGridView(
-                        cpuFraction: viewModel.cpuFraction,
-                        ramFraction: viewModel.ramFraction,
-                        ramGo: Double(ProcessInfo.processInfo.physicalMemory)/1024/1024/1024,
-                        storageUsed: usedDiskSpace,
-                        storageTotal: totalDiskSpace,
-                        percentUsed: viewModel.storageFraction,
-                        batteryLevel: viewModel.batteryLevel,
-                        batteryState: viewModel.batteryState,
-                        batteryStatusText: viewModel.batteryState == .charging ? "En charge" : "Sur batterie",
-//                        appleBatteryColor: viewModel.batteryState == .charging ? Color.green : Color.blue
+                      cpuFraction: viewModel.cpuFraction,
+                      ramFraction: viewModel.ramFraction,
+                      ramGo: Double(ProcessInfo.processInfo.physicalMemory)/1024/1024/1024,
+                      storageUsed: viewModel.storageFraction * viewModel.getTotalDiskSpaceDouble(),
+                      storageTotal: viewModel.getTotalDiskSpaceDouble(),
+                      percentUsed: viewModel.storageFraction,
+                      batteryLevel: viewModel.batteryLevel,
+                      batteryState: viewModel.batteryState,
+                      batteryStatusText: viewModel.batteryState == .charging ? "En charge" : "Sur batterie"
                     )
 
                     NetworkPanelCard(
@@ -57,7 +56,5 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
-            .previewDevice("iPhone 15 Pro")
-            .previewDisplayName("Dashboard Athena - Preview")
     }
 }

@@ -27,7 +27,7 @@ struct Provider: TimelineProvider {
         let entry = WidgetEntry(date: currentDate, data: data)
         
         // Rafraîchir toutes les 2 minutes (recommandation Apple)
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 2, to: currentDate)!
+        let nextUpdate = Calendar.current.date(byAdding: .second, value: 15, to: currentDate)!
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         
         completion(timeline)

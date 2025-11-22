@@ -9,6 +9,7 @@ import Foundation
 import Network
 import UIKit
 import Combine
+import WidgetKit
 
 enum NetworkType {
     case wifi, cellular, none

@@ -83,7 +83,7 @@ struct SmallWidgetView: View {
             .padding(.bottom, 12)
             
             // Métriques principales avec barres
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 CompactMetric(
                     icon: "cpu",
                     color: .blue,
@@ -98,6 +98,14 @@ struct SmallWidgetView: View {
                     label: "RAM",
                     value: data.ramUsage,
                     displayValue: "\(Int(data.ramUsage * 100))%"
+                )
+                
+                CompactMetric(
+                    icon: "internaldrive",
+                    color: .orange,
+                    label: "Stockage",
+                    value: data.storageUsage,
+                    displayValue: "\(Int(data.storageUsage * 100))%"
                 )
                 
                 CompactMetric(
@@ -130,6 +138,7 @@ struct SmallWidgetView: View {
     }
 }
 
+
 // MARK: - Medium Widget (Norme Apple)
 
 struct MediumWidgetView: View {
@@ -154,7 +163,7 @@ struct MediumWidgetView: View {
                 .padding(.bottom, 12)
                 
                 // Métriques
-                VStack(spacing: 10) {
+                VStack(spacing: 8) {
                     CompactMetric(
                         icon: "cpu",
                         color: .blue,
@@ -177,6 +186,14 @@ struct MediumWidgetView: View {
                         label: "Stockage",
                         value: data.storageUsage,
                         displayValue: "\(Int(data.storageUsage * 100))%"
+                    )
+                    
+                    CompactMetric(
+                        icon: batteryIcon(data.batteryLevel),
+                        color: batteryColor(data.batteryLevel, state: data.batteryState),
+                        label: "Batterie",
+                        value: Double(data.batteryLevel),
+                        displayValue: "\(Int(data.batteryLevel * 100))%"
                     )
                 }
                 
@@ -208,7 +225,7 @@ struct MediumWidgetView: View {
                 .padding(.bottom, 12)
                 
                 // Vitesses
-                VStack(spacing: 12) {
+                VStack(spacing: 16) {
                     NetworkSpeed(
                         icon: "arrow.down.circle.fill",
                         color: .blue,
@@ -223,23 +240,17 @@ struct MediumWidgetView: View {
                         speed: formatSpeed(data.networkUpload)
                     )
                     
-                    // Batterie
+                    // Type de connexion
                     HStack(spacing: 6) {
-                        Image(systemName: batteryIcon(data.batteryLevel))
-                            .font(.caption)
-                            .foregroundStyle(batteryColor(data.batteryLevel, state: data.batteryState))
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 6, height: 6)
                         
-                        Text("\(Int(data.batteryLevel * 100))%")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.primary)
+                        Text(data.isWiFi ? "Wi-Fi" : "Cellulaire")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                         
                         Spacer()
-                        
-                        if data.batteryState == "charging" {
-                            Image(systemName: "bolt.fill")
-                                .font(.caption2)
-                                .foregroundStyle(.green)
-                        }
                     }
                 }
                 

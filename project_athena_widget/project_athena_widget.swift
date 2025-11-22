@@ -26,8 +26,8 @@ struct Provider: TimelineProvider {
         let data = WidgetDataService.shared.loadWidgetData() ?? .placeholder
         let entry = WidgetEntry(date: currentDate, data: data)
         
-        // Rafraîchir toutes les 5 minutes
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 5, to: currentDate)!
+        // Rafraîchir toutes les 2 minutes (recommandation Apple)
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 2, to: currentDate)!
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         
         completion(timeline)
@@ -55,42 +55,64 @@ struct project_athena_widgetEntryView : View {
             MediumWidgetView(data: entry.data)
         case .systemLarge:
             LargeWidgetView(data: entry.data)
-        default:
+        @unknown default:
             SmallWidgetView(data: entry.data)
         }
     }
 }
 
-// MARK: - Small Widget
+// MARK: - Small Widget (Norme Apple)
 
 struct SmallWidgetView: View {
     let data: WidgetData
     
     var body: some View {
-        VStack(spacing: 8) {
-            // En-tête
-            HStack {
-                Image(systemName: "iphone.gen3")
-                    .font(.caption)
-                    .foregroundColor(.blue)
+        VStack(alignment: .leading, spacing: 0) {
+            // En-tête compact
+            HStack(spacing: 6) {
+                Image(systemName: "chart.xyaxis.line")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.blue)
+                
                 Text("Athena")
-                    .font(.caption)
-                    .fontWeight(.semibold)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                
                 Spacer()
             }
+            .padding(.bottom, 12)
             
-            Divider()
-            
-            // Métriques
-            VStack(spacing: 6) {
-                MetricRow(icon: "cpu", color: .blue, label: "CPU", value: "\(Int(data.cpuUsage * 100))%")
-                MetricRow(icon: "memorychip", color: .purple, label: "RAM", value: "\(Int(data.ramUsage * 100))%")
-                MetricRow(icon: "internaldrive", color: .orange, label: "Stockage", value: "\(Int(data.storageUsage * 100))%")
-                MetricRow(icon: batteryIcon(data.batteryLevel), color: batteryColor(data.batteryLevel), label: "Batterie", value: "\(Int(data.batteryLevel * 100))%")
+            // Métriques principales avec barres
+            VStack(spacing: 10) {
+                CompactMetric(
+                    icon: "cpu",
+                    color: .blue,
+                    label: "CPU",
+                    value: data.cpuUsage,
+                    displayValue: "\(Int(data.cpuUsage * 100))%"
+                )
+                
+                CompactMetric(
+                    icon: "memorychip",
+                    color: .purple,
+                    label: "RAM",
+                    value: data.ramUsage,
+                    displayValue: "\(Int(data.ramUsage * 100))%"
+                )
+                
+                CompactMetric(
+                    icon: batteryIcon(data.batteryLevel),
+                    color: batteryColor(data.batteryLevel, state: data.batteryState),
+                    label: "Batterie",
+                    value: Double(data.batteryLevel),
+                    displayValue: "\(Int(data.batteryLevel * 100))%"
+                )
             }
+            
+            Spacer()
         }
-        .padding()
-        .background(Color(.systemBackground))
+        .padding(16)
+        .widgetBackground()
     }
     
     private func batteryIcon(_ level: Float) -> String {
@@ -100,91 +122,133 @@ struct SmallWidgetView: View {
         else { return "battery.25percent" }
     }
     
-    private func batteryColor(_ level: Float) -> Color {
-        if level >= 0.5 { return .green }
-        else if level >= 0.2 { return .yellow }
+    private func batteryColor(_ level: Float, state: String) -> Color {
+        if state == "charging" { return .green }
+        else if level >= 0.5 { return .green }
+        else if level >= 0.2 { return .orange }
         else { return .red }
     }
 }
 
-// MARK: - Medium Widget
+// MARK: - Medium Widget (Norme Apple)
 
 struct MediumWidgetView: View {
     let data: WidgetData
     
     var body: some View {
-        HStack(spacing: 12) {
-            // Colonne gauche : Métriques système
-            VStack(spacing: 8) {
-                HStack {
-                    Image(systemName: "iphone.gen3")
-                        .font(.caption)
-                        .foregroundColor(.blue)
-                    Text("Athena")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                    Spacer()
-                }
-                
-                Divider()
-                
-                VStack(spacing: 6) {
-                    MetricRow(icon: "cpu", color: .blue, label: "CPU", value: "\(Int(data.cpuUsage * 100))%")
-                    MetricRow(icon: "memorychip", color: .purple, label: "RAM", value: "\(Int(data.ramUsage * 100))%")
-                    MetricRow(icon: "internaldrive", color: .orange, label: "Stockage", value: "\(Int(data.storageUsage * 100))%")
-                    MetricRow(icon: batteryIcon(data.batteryLevel), color: batteryColor(data.batteryLevel), label: "Batterie", value: "\(Int(data.batteryLevel * 100))%")
-                }
-            }
-            
-            Divider()
-            
-            // Colonne droite : Réseau
-            VStack(spacing: 8) {
-                HStack {
-                    Image(systemName: data.isWiFi ? "wifi" : "antenna.radiowaves.left.and.right")
-                        .font(.caption)
-                        .foregroundColor(data.isWiFi ? .blue : .orange)
-                    Text("Réseau")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                    Spacer()
-                }
-                
-                Divider()
-                
-                VStack(spacing: 12) {
-                    VStack(spacing: 4) {
-                        HStack {
-                            Image(systemName: "arrow.down.circle.fill")
-                                .font(.caption2)
-                                .foregroundColor(.blue)
-                            Text("Download")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                        Text(formatSpeed(data.networkDownload))
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundColor(.blue)
-                    }
+        HStack(spacing: 0) {
+            // Section système
+            VStack(alignment: .leading, spacing: 0) {
+                // En-tête
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.xyaxis.line")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.blue)
                     
-                    VStack(spacing: 4) {
-                        HStack {
-                            Image(systemName: "arrow.up.circle.fill")
+                    Text("Système")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    
+                    Spacer()
+                }
+                .padding(.bottom, 12)
+                
+                // Métriques
+                VStack(spacing: 10) {
+                    CompactMetric(
+                        icon: "cpu",
+                        color: .blue,
+                        label: "CPU",
+                        value: data.cpuUsage,
+                        displayValue: "\(Int(data.cpuUsage * 100))%"
+                    )
+                    
+                    CompactMetric(
+                        icon: "memorychip",
+                        color: .purple,
+                        label: "RAM",
+                        value: data.ramUsage,
+                        displayValue: "\(Int(data.ramUsage * 100))%"
+                    )
+                    
+                    CompactMetric(
+                        icon: "internaldrive",
+                        color: .orange,
+                        label: "Stockage",
+                        value: data.storageUsage,
+                        displayValue: "\(Int(data.storageUsage * 100))%"
+                    )
+                }
+                
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+            .padding(16)
+            
+            // Divider
+            Rectangle()
+                .fill(Color(.separator).opacity(0.3))
+                .frame(width: 1)
+                .padding(.vertical, 12)
+            
+            // Section réseau
+            VStack(alignment: .leading, spacing: 0) {
+                // En-tête
+                HStack(spacing: 6) {
+                    Image(systemName: data.isWiFi ? "wifi" : "antenna.radiowaves.left.and.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(data.isWiFi ? .blue : .orange)
+                    
+                    Text("Réseau")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    
+                    Spacer()
+                }
+                .padding(.bottom, 12)
+                
+                // Vitesses
+                VStack(spacing: 12) {
+                    NetworkSpeed(
+                        icon: "arrow.down.circle.fill",
+                        color: .blue,
+                        label: "Download",
+                        speed: formatSpeed(data.networkDownload)
+                    )
+                    
+                    NetworkSpeed(
+                        icon: "arrow.up.circle.fill",
+                        color: .green,
+                        label: "Upload",
+                        speed: formatSpeed(data.networkUpload)
+                    )
+                    
+                    // Batterie
+                    HStack(spacing: 6) {
+                        Image(systemName: batteryIcon(data.batteryLevel))
+                            .font(.caption)
+                            .foregroundStyle(batteryColor(data.batteryLevel, state: data.batteryState))
+                        
+                        Text("\(Int(data.batteryLevel * 100))%")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary)
+                        
+                        Spacer()
+                        
+                        if data.batteryState == "charging" {
+                            Image(systemName: "bolt.fill")
                                 .font(.caption2)
-                                .foregroundColor(.green)
-                            Text("Upload")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.green)
                         }
-                        Text(formatSpeed(data.networkUpload))
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundColor(.green)
                     }
                 }
+                
+                Spacer()
             }
+            .frame(maxWidth: .infinity)
+            .padding(16)
         }
-        .padding()
-        .background(Color(.systemBackground))
+        .widgetBackground()
     }
     
     private func batteryIcon(_ level: Float) -> String {
@@ -194,9 +258,10 @@ struct MediumWidgetView: View {
         else { return "battery.25percent" }
     }
     
-    private func batteryColor(_ level: Float) -> Color {
-        if level >= 0.5 { return .green }
-        else if level >= 0.2 { return .yellow }
+    private func batteryColor(_ level: Float, state: String) -> Color {
+        if state == "charging" { return .green }
+        else if level >= 0.5 { return .green }
+        else if level >= 0.2 { return .orange }
         else { return .red }
     }
     
@@ -208,67 +273,126 @@ struct MediumWidgetView: View {
     }
 }
 
-// MARK: - Large Widget
+// MARK: - Large Widget (Norme Apple)
 
 struct LargeWidgetView: View {
     let data: WidgetData
     
     var body: some View {
-        VStack(spacing: 12) {
-            // En-tête
-            HStack {
-                Image(systemName: "iphone.gen3")
-                    .foregroundColor(.blue)
-                Text("Project Athena")
-                    .font(.headline)
-                    .fontWeight(.bold)
+        VStack(alignment: .leading, spacing: 0) {
+            // En-tête global
+            HStack(spacing: 8) {
+                Image(systemName: "chart.xyaxis.line")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.blue)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Project Athena")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    
+                    Text("Surveillance système")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                
                 Spacer()
-                Text(data.timestamp, style: .time)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(data.timestamp, style: .time)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    
+                    Text("Mise à jour")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
-            
-            Divider()
+            .padding(.bottom, 16)
             
             // Grille de métriques
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                LargeMetricCard(icon: "cpu", color: .blue, label: "CPU", value: "\(Int(data.cpuUsage * 100))%", percent: data.cpuUsage)
-                LargeMetricCard(icon: "memorychip", color: .purple, label: "RAM", value: "\(Int(data.ramUsage * 100))%", percent: data.ramUsage)
-                LargeMetricCard(icon: "internaldrive", color: .orange, label: "Stockage", value: "\(Int(data.storageUsage * 100))%", percent: data.storageUsage)
-                LargeMetricCard(icon: batteryIcon(data.batteryLevel), color: batteryColor(data.batteryLevel), label: "Batterie", value: "\(Int(data.batteryLevel * 100))%", percent: Double(data.batteryLevel))
-            }
-            
-            Divider()
-            
-            // Réseau
-            HStack(spacing: 16) {
-                VStack {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .foregroundColor(.blue)
-                    Text(formatSpeed(data.networkDownload))
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(.blue)
-                    Text("Download")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 12),
+                    GridItem(.flexible(), spacing: 12)
+                ],
+                spacing: 12
+            ) {
+                MetricCard(
+                    icon: "cpu",
+                    color: .blue,
+                    label: "CPU",
+                    value: "\(Int(data.cpuUsage * 100))%",
+                    percent: data.cpuUsage
+                )
                 
-                VStack {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .foregroundColor(.green)
-                    Text(formatSpeed(data.networkUpload))
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(.green)
-                    Text("Upload")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                MetricCard(
+                    icon: "memorychip",
+                    color: .purple,
+                    label: "RAM",
+                    value: "\(Int(data.ramUsage * 100))%",
+                    percent: data.ramUsage
+                )
+                
+                MetricCard(
+                    icon: "internaldrive",
+                    color: .orange,
+                    label: "Stockage",
+                    value: "\(Int(data.storageUsage * 100))%",
+                    percent: data.storageUsage
+                )
+                
+                MetricCard(
+                    icon: batteryIcon(data.batteryLevel),
+                    color: batteryColor(data.batteryLevel, state: data.batteryState),
+                    label: "Batterie",
+                    value: "\(Int(data.batteryLevel * 100))%",
+                    percent: Double(data.batteryLevel)
+                )
+            }
+            .padding(.bottom, 16)
+            
+            // Divider
+            Rectangle()
+                .fill(Color(.separator).opacity(0.3))
+                .frame(height: 1)
+                .padding(.bottom, 12)
+            
+            // Section réseau
+            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: data.isWiFi ? "wifi" : "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(data.isWiFi ? .blue : .orange)
+                        
+                        Text(data.isWiFi ? "Wi-Fi" : "Cellulaire")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary)
+                    }
+                    
+                    HStack(spacing: 16) {
+                        NetworkSpeedLarge(
+                            icon: "arrow.down.circle.fill",
+                            color: .blue,
+                            label: "Download",
+                            speed: formatSpeed(data.networkDownload)
+                        )
+                        
+                        NetworkSpeedLarge(
+                            icon: "arrow.up.circle.fill",
+                            color: .green,
+                            label: "Upload",
+                            speed: formatSpeed(data.networkUpload)
+                        )
+                    }
                 }
-                .frame(maxWidth: .infinity)
+                
+                Spacer()
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
+        .padding(16)
+        .widgetBackground()
     }
     
     private func batteryIcon(_ level: Float) -> String {
@@ -278,9 +402,10 @@ struct LargeWidgetView: View {
         else { return "battery.25percent" }
     }
     
-    private func batteryColor(_ level: Float) -> Color {
-        if level >= 0.5 { return .green }
-        else if level >= 0.2 { return .yellow }
+    private func batteryColor(_ level: Float, state: String) -> Color {
+        if state == "charging" { return .green }
+        else if level >= 0.5 { return .green }
+        else if level >= 0.2 { return .orange }
         else { return .red }
     }
     
@@ -292,36 +417,53 @@ struct LargeWidgetView: View {
     }
 }
 
-// MARK: - Helper Views
+// MARK: - Composants réutilisables (Norme Apple)
 
-struct MetricRow: View {
+struct CompactMetric: View {
     let icon: String
     let color: Color
     let label: String
-    let value: String
+    let value: Double
+    let displayValue: String
     
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.caption2)
-                .foregroundColor(color)
-                .frame(width: 16)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(color)
+                    .frame(width: 14)
+                
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                
+                Spacer()
+                
+                Text(displayValue)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+            }
             
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-            
-            Spacer()
-            
-            Text(value)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
+            // Barre de progression
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color(.systemGray5))
+                        .frame(height: 3)
+                    
+                    Capsule()
+                        .fill(color.gradient)
+                        .frame(width: geo.size.width * CGFloat(min(max(value, 0), 1)), height: 3)
+                }
+            }
+            .frame(height: 3)
         }
     }
 }
 
-struct LargeMetricCard: View {
+struct MetricCard: View {
     let icon: String
     let color: Color
     let label: String
@@ -329,19 +471,27 @@ struct LargeMetricCard: View {
     let percent: Double
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(color)
-                    .font(.caption)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(color.opacity(0.15))
+                        .frame(width: 24, height: 24)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(color)
+                }
+                
                 Text(label)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
             }
             
             Text(value)
                 .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
+                .monospacedDigit()
             
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -350,15 +500,86 @@ struct LargeMetricCard: View {
                         .frame(height: 4)
                     
                     Capsule()
-                        .fill(color)
+                        .fill(color.gradient)
                         .frame(width: geo.size.width * CGFloat(min(max(percent, 0), 1)), height: 4)
                 }
             }
             .frame(height: 4)
         }
-        .padding(8)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(8)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.secondarySystemFill).opacity(0.5))
+        )
+    }
+}
+
+struct NetworkSpeed: View {
+    let icon: String
+    let color: Color
+    let label: String
+    let speed: String
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundStyle(color)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(speed)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+                
+                Text(label)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+        }
+    }
+}
+
+struct NetworkSpeedLarge: View {
+    let icon: String
+    let color: Color
+    let label: String
+    let speed: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                    .foregroundStyle(color)
+                
+                Text(label)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Text(speed)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+                .monospacedDigit()
+        }
+    }
+}
+
+// MARK: - Widget Background Extension (iOS 17+)
+
+extension View {
+    @ViewBuilder
+    func widgetBackground() -> some View {
+        if #available(iOSApplicationExtension 17.0, *) {
+            self.containerBackground(for: .widget) {
+                Color(.systemBackground)
+            }
+        } else {
+            self.background(Color(.systemBackground))
+        }
     }
 }
 
@@ -370,15 +591,15 @@ struct project_athena_widget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             project_athena_widgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Athena Dashboard")
         .description("Surveillez les performances de votre iPhone en temps réel.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .contentMarginsDisabled() // iOS 17+ pour supprimer les marges par défaut
     }
 }
 
-// MARK: - Preview
+// MARK: - Previews
 
 #Preview(as: .systemSmall) {
     project_athena_widget()

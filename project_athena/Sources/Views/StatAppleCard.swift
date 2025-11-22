@@ -59,7 +59,7 @@ struct StatAppleCard: View {
                             width: geometry.size.width * CGFloat(max(min(percent, 1), 0)),
                             height: 6
                         )
-                        .shadow(color: barGradient.stops.first?.color.opacity(0.3) ?? .clear, radius: 2, x: 0, y: 1)
+                        .shadow(color: iconBg.opacity(0.3), radius: 2, x: 0, y: 1)
                 }
             }
             .frame(height: 6)

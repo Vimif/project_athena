@@ -15,26 +15,38 @@ enum NetworkType {
 }
 
 class DashboardViewModel: ObservableObject {
-    // MARK: - Metrics (ajouter ici toutes les fraactions que tu utilises)
-    @Published var stats: [SystemStats] = []
-    @Published var networkStat: AppNetworkUsage = AppNetworkUsage(sent: 0, received: 0)
-
-    // Pour compatibilité avec toutes les Views
-    @Published var ramFraction: Double = 0.0         // Correction !
     @Published var cpuFraction: Double = 0.0
-    @Published var batteryLevel: Float = 0.0
-    @Published var batteryState: UIDevice.BatteryState = .unknown
-    @Published var isWiFi: Bool = false              // Correction !
+    @Published var ramFraction: Double = 0.0
     @Published var storageFraction: Double = 0.0
+    @Published var batteryLevel: Float = 1.0
+    @Published var batteryState: UIDevice.BatteryState = .unknown
+    @Published var networkStat: AppNetworkUsage = AppNetworkUsage(sent: 0, received: 0)
     @Published var networkSamples: [NetworkSample] = []
-
     var timer: Timer?
-    
+
+    var isPreview: Bool {
+        ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
+
     init() {
-            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-                self.refreshNetwork()
-            }
+        
+        self.networkSamples = (0..<32).map { i in
+            NetworkSample(
+                upload: Double.random(in: 300...1200),
+                download: Double.random(in: 600...2400)
+            )
         }
+
+        UIDevice.current.isBatteryMonitoringEnabled = true
+        
+        refreshStats()
+        refreshNetwork()
+        
+        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.refreshStats()
+            self?.refreshNetwork()
+        }
+    }
         func refreshNetwork() {
             // Ici, récupère les stats réseau
             let usageNow = getNetworkUsage() // à créer ou à améliorer !
@@ -102,12 +114,19 @@ class DashboardViewModel: ObservableObject {
     
     // MARK: - Refresh/Mise à jour background
     func refreshStats() {
-        self.ramFraction = SystemMetrics.ramUsedFraction()
-        self.cpuFraction = SystemMetrics.cpuUsageFraction()
-        self.storageFraction = SystemMetrics.storageFraction()
-        self.batteryLevel = UIDevice.current.batteryLevel
-        self.batteryState = UIDevice.current.batteryState
+        let cpu = SystemMetrics.cpuUsageFraction()
+        let ram = SystemMetrics.ramUsedFraction()
+        let stor = SystemMetrics.storageFraction()
+        let battery = UIDevice.current.batteryLevel
+        let state = UIDevice.current.batteryState
+        
+        self.cpuFraction = cpu > 0 ? cpu : 0.12
+        self.ramFraction = ram > 0 ? ram : 0.55
+        self.storageFraction = stor > 0 ? stor : 0.22
+        self.batteryLevel = battery >= 0 ? battery : 0.93
+        self.batteryState = state
     }
+
     
     func refreshNetworkType() {
         getCurrentNetworkType { type in

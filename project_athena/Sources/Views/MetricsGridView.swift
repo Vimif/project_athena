@@ -1,8 +1,13 @@
+//
+//  MetricsGridView.swift
+//  project_athena
+//
+//  Created by Thomas Boisaubert on 20/11/2025.
+//
+
 import SwiftUI
-//import Formatting
 
 struct MetricsGridView: View {
-    // On récupère un objet stats complet, ou on injecte les valeurs explicitement
     let cpuFraction: Double
     let ramFraction: Double
     let ramGo: Double
@@ -14,7 +19,6 @@ struct MetricsGridView: View {
     let batteryStatusText: String
     
     var body: some View {
-        
         let batteryColor = Formatting.appleBatteryColor(level: batteryLevel, state: batteryState)
         let batteryText = Formatting.batteryStatusText(state: batteryState)
         
@@ -35,7 +39,6 @@ struct MetricsGridView: View {
                 ),
                 caseColor: Color.cardBackground
             )
-
             
             // RAM
             StatAppleCard(
@@ -47,7 +50,8 @@ struct MetricsGridView: View {
                 percent: ramFraction,
                 barGradient: LinearGradient(
                     gradient: Gradient(colors: [Color.cyan, Color.blue]),
-                    startPoint: .leading, endPoint: .trailing
+                    startPoint: .leading,
+                    endPoint: .trailing
                 ),
                 caseColor: Color.cardBackground
             )
@@ -62,15 +66,15 @@ struct MetricsGridView: View {
                 percent: percentUsed,
                 barGradient: LinearGradient(
                     gradient: Gradient(colors: [Color.purple, Color.pink]),
-                    startPoint: .leading, endPoint: .trailing
-                
+                    startPoint: .leading,
+                    endPoint: .trailing
                 ),
                 caseColor: Color.cardBackground
             )
             
             // Batterie
             StatAppleCard(
-                icon: "battery.100",
+                icon: "battery.100percent",
                 iconBg: batteryColor,
                 title: "Batterie",
                 valueLeft: batteryText,
@@ -78,11 +82,11 @@ struct MetricsGridView: View {
                 percent: Double(batteryLevel),
                 barGradient: LinearGradient(
                     gradient: Gradient(colors: [batteryColor, Color(.systemGray3)]),
-                    startPoint: .leading, endPoint: .trailing
+                    startPoint: .leading,
+                    endPoint: .trailing
                 ),
                 caseColor: Color.cardBackground
             )
-
         }
     }
 }

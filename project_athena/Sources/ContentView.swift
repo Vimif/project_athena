@@ -24,21 +24,21 @@ struct ContentView: View {
                     let usedDiskSpace = viewModel.storageFraction * totalDiskSpace
 
                     MetricsGridView(
-                      cpuFraction: viewModel.cpuFraction,
-                      ramFraction: viewModel.ramFraction,
-                      ramGo: Double(ProcessInfo.processInfo.physicalMemory)/1024/1024/1024,
-                      storageUsed: viewModel.storageFraction * viewModel.getTotalDiskSpaceDouble(),
-                      storageTotal: viewModel.getTotalDiskSpaceDouble(),
-                      percentUsed: viewModel.storageFraction,
-                      batteryLevel: viewModel.batteryLevel,
-                      batteryState: viewModel.batteryState,
-                      batteryStatusText: viewModel.batteryState == .charging ? "En charge" : "Sur batterie"
+                        cpuFraction: viewModel.cpuFraction,
+                        ramFraction: viewModel.ramFraction,
+                        ramGo: Double(ProcessInfo.processInfo.physicalMemory) / 1024 / 1024 / 1024,
+                        storageUsed: viewModel.storageFraction * viewModel.getTotalDiskSpaceDouble(),
+                        storageTotal: viewModel.getTotalDiskSpaceDouble(),
+                        percentUsed: viewModel.storageFraction,
+                        batteryLevel: viewModel.batteryLevel,
+                        batteryState: viewModel.batteryState,
+                        batteryStatusText: viewModel.batteryState == .charging ? "En charge" : "Sur batterie"
                     )
 
                     NetworkPanelCard(
                         netPoints: viewModel.networkSamples,
-                        totalDownload: Double(viewModel.networkStat.received)/1024/1024,
-                        totalUpload: Double(viewModel.networkStat.sent)/1024/1024,
+                        totalDownload: Double(viewModel.networkStat.received) / 1024 / 1024,
+                        totalUpload: Double(viewModel.networkStat.sent) / 1024 / 1024,
                         isWiFi: viewModel.isWiFi
                     )
                 }

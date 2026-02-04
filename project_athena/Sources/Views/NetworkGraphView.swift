@@ -241,7 +241,7 @@ struct NetworkGraphView: View {
     private func dataPoints(width: CGFloat, height: CGFloat) -> some View {
         Group {
             // Point download (dernier point seulement)
-            if let lastSample = samples.last, !samples.isEmpty {
+            if !samples.isEmpty {
                 let downloadValues = samples.map { $0.download }
                 let points = normalizedPoints(for: downloadValues, width: width, height: height)
                 
@@ -260,7 +260,7 @@ struct NetworkGraphView: View {
             }
             
             // Point upload (dernier point seulement)
-            if let lastSample = samples.last, !samples.isEmpty {
+            if !samples.isEmpty {
                 let uploadValues = samples.map { $0.upload }
                 let points = normalizedPoints(for: uploadValues, width: width, height: height)
                 

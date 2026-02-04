@@ -61,6 +61,28 @@ struct project_athena_widgetEntryView : View {
     }
 }
 
+// MARK: - Shared Helpers
+
+private func sharedBatteryIcon(_ level: Float) -> String {
+    if level >= 0.75 { return "battery.100percent" }
+    else if level >= 0.5 { return "battery.75percent" }
+    else if level >= 0.25 { return "battery.50percent" }
+    else { return "battery.25percent" }
+}
+
+private func sharedBatteryColor(_ level: Float) -> Color {
+    if level >= 0.5 { return .green }
+    else if level >= 0.2 { return .yellow }
+    else { return .red }
+}
+
+private func sharedFormatSpeed(_ kbps: Double) -> String {
+    if kbps >= 1024 {
+        return String(format: "%.1f MB/s", kbps / 1024)
+    }
+    return String(format: "%.0f KB/s", kbps)
+}
+
 // MARK: - Small Widget
 
 struct SmallWidgetView: View {
@@ -86,24 +108,11 @@ struct SmallWidgetView: View {
                 MetricRow(icon: "cpu", color: .blue, label: "CPU", value: "\(Int(data.cpuUsage * 100))%")
                 MetricRow(icon: "memorychip", color: .purple, label: "RAM", value: "\(Int(data.ramUsage * 100))%")
                 MetricRow(icon: "internaldrive", color: .orange, label: "Stockage", value: "\(Int(data.storageUsage * 100))%")
-                MetricRow(icon: batteryIcon(data.batteryLevel), color: batteryColor(data.batteryLevel), label: "Batterie", value: "\(Int(data.batteryLevel * 100))%")
+                MetricRow(icon: sharedBatteryIcon(data.batteryLevel), color: sharedBatteryColor(data.batteryLevel), label: "Batterie", value: "\(Int(data.batteryLevel * 100))%")
             }
         }
         .padding()
         .background(Color(.systemBackground))
-    }
-    
-    private func batteryIcon(_ level: Float) -> String {
-        if level >= 0.75 { return "battery.100percent" }
-        else if level >= 0.5 { return "battery.75percent" }
-        else if level >= 0.25 { return "battery.50percent" }
-        else { return "battery.25percent" }
-    }
-    
-    private func batteryColor(_ level: Float) -> Color {
-        if level >= 0.5 { return .green }
-        else if level >= 0.2 { return .yellow }
-        else { return .red }
     }
 }
 
@@ -132,7 +141,7 @@ struct MediumWidgetView: View {
                     MetricRow(icon: "cpu", color: .blue, label: "CPU", value: "\(Int(data.cpuUsage * 100))%")
                     MetricRow(icon: "memorychip", color: .purple, label: "RAM", value: "\(Int(data.ramUsage * 100))%")
                     MetricRow(icon: "internaldrive", color: .orange, label: "Stockage", value: "\(Int(data.storageUsage * 100))%")
-                    MetricRow(icon: batteryIcon(data.batteryLevel), color: batteryColor(data.batteryLevel), label: "Batterie", value: "\(Int(data.batteryLevel * 100))%")
+                    MetricRow(icon: sharedBatteryIcon(data.batteryLevel), color: sharedBatteryColor(data.batteryLevel), label: "Batterie", value: "\(Int(data.batteryLevel * 100))%")
                 }
             }
             
@@ -162,7 +171,7 @@ struct MediumWidgetView: View {
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
-                        Text(formatSpeed(data.networkDownload))
+                        Text(sharedFormatSpeed(data.networkDownload))
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundColor(.blue)
                     }
@@ -176,7 +185,7 @@ struct MediumWidgetView: View {
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
-                        Text(formatSpeed(data.networkUpload))
+                        Text(sharedFormatSpeed(data.networkUpload))
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundColor(.green)
                     }
@@ -185,26 +194,6 @@ struct MediumWidgetView: View {
         }
         .padding()
         .background(Color(.systemBackground))
-    }
-    
-    private func batteryIcon(_ level: Float) -> String {
-        if level >= 0.75 { return "battery.100percent" }
-        else if level >= 0.5 { return "battery.75percent" }
-        else if level >= 0.25 { return "battery.50percent" }
-        else { return "battery.25percent" }
-    }
-    
-    private func batteryColor(_ level: Float) -> Color {
-        if level >= 0.5 { return .green }
-        else if level >= 0.2 { return .yellow }
-        else { return .red }
-    }
-    
-    private func formatSpeed(_ kbps: Double) -> String {
-        if kbps >= 1024 {
-            return String(format: "%.1f MB/s", kbps / 1024)
-        }
-        return String(format: "%.0f KB/s", kbps)
     }
 }
 
@@ -235,7 +224,7 @@ struct LargeWidgetView: View {
                 LargeMetricCard(icon: "cpu", color: .blue, label: "CPU", value: "\(Int(data.cpuUsage * 100))%", percent: data.cpuUsage)
                 LargeMetricCard(icon: "memorychip", color: .purple, label: "RAM", value: "\(Int(data.ramUsage * 100))%", percent: data.ramUsage)
                 LargeMetricCard(icon: "internaldrive", color: .orange, label: "Stockage", value: "\(Int(data.storageUsage * 100))%", percent: data.storageUsage)
-                LargeMetricCard(icon: batteryIcon(data.batteryLevel), color: batteryColor(data.batteryLevel), label: "Batterie", value: "\(Int(data.batteryLevel * 100))%", percent: Double(data.batteryLevel))
+                LargeMetricCard(icon: sharedBatteryIcon(data.batteryLevel), color: sharedBatteryColor(data.batteryLevel), label: "Batterie", value: "\(Int(data.batteryLevel * 100))%", percent: Double(data.batteryLevel))
             }
             
             Divider()
@@ -245,7 +234,7 @@ struct LargeWidgetView: View {
                 VStack {
                     Image(systemName: "arrow.down.circle.fill")
                         .foregroundColor(.blue)
-                    Text(formatSpeed(data.networkDownload))
+                    Text(sharedFormatSpeed(data.networkDownload))
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundColor(.blue)
                     Text("Download")
@@ -257,7 +246,7 @@ struct LargeWidgetView: View {
                 VStack {
                     Image(systemName: "arrow.up.circle.fill")
                         .foregroundColor(.green)
-                    Text(formatSpeed(data.networkUpload))
+                    Text(sharedFormatSpeed(data.networkUpload))
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundColor(.green)
                     Text("Upload")
@@ -269,26 +258,6 @@ struct LargeWidgetView: View {
         }
         .padding()
         .background(Color(.systemBackground))
-    }
-    
-    private func batteryIcon(_ level: Float) -> String {
-        if level >= 0.75 { return "battery.100percent" }
-        else if level >= 0.5 { return "battery.75percent" }
-        else if level >= 0.25 { return "battery.50percent" }
-        else { return "battery.25percent" }
-    }
-    
-    private func batteryColor(_ level: Float) -> Color {
-        if level >= 0.5 { return .green }
-        else if level >= 0.2 { return .yellow }
-        else { return .red }
-    }
-    
-    private func formatSpeed(_ kbps: Double) -> String {
-        if kbps >= 1024 {
-            return String(format: "%.1f MB/s", kbps / 1024)
-        }
-        return String(format: "%.0f KB/s", kbps)
     }
 }
 

@@ -24,7 +24,6 @@ class WidgetDataService {
         
         if let encoded = try? JSONEncoder().encode(data) {
             userDefaults.set(encoded, forKey: widgetDataKey)
-            userDefaults.synchronize()
             
             // Demander au widget de se rafraîchir
             WidgetCenter.shared.reloadAllTimelines()

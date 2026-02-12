@@ -14,10 +14,13 @@ enum NetworkType {
     case wifi, cellular, none
 }
 
+@MainActor
 class DashboardViewModel: ObservableObject {
     @Published var cpuFraction: Double = 0.0
     @Published var ramFraction: Double = 0.0
     @Published var storageFraction: Double = 0.0
+    @Published var totalDiskSpaceGB: Double = 0.0
+    @Published var totalDiskSpaceString: String = "N/A"
     @Published var batteryLevel: Float = 1.0
     @Published var batteryState: UIDevice.BatteryState = .unknown
     @Published var networkStat: AppNetworkUsage = AppNetworkUsage(sent: 0, received: 0)
@@ -40,27 +43,26 @@ class DashboardViewModel: ObservableObject {
         UIDevice.current.isBatteryMonitoringEnabled = true
         
         // Premier refresh immédiat
-        DispatchQueue.main.async { [weak self] in
-            self?.refreshStats()
-            self?.refreshNetworkType()
+        Task {
+            await self.refreshStats()
+            self.refreshNetworkType()
         }
         
         // Démarrer le timer sur le main thread
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-                self?.refreshAll()
+        self.timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task {
+                await self?.refreshAll()
             }
         }
     }
     
     // MARK: - Refresh combiné
     
-    private func refreshAll() {
-        refreshStats()
+    private func refreshAll() async {
+        await refreshStats()
         refreshNetwork()
         refreshNetworkType()
-        updateWidgetData() // AJOUTER CETTE LIGNE
+        updateWidgetData()
     }
     
     private func refreshNetwork() {
@@ -121,11 +123,7 @@ class DashboardViewModel: ObservableObject {
     // MARK: - Fonctions utilitaires
     
     func getTotalDiskSpaceDouble() -> Double {
-        guard let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
-              let total = attrs[.systemSize] as? Double else {
-            return 128.0
-        }
-        return total / 1024 / 1024 / 1024
+        return totalDiskSpaceGB > 0 ? totalDiskSpaceGB : 128.0
     }
 
     func getChipModel(model: String) -> String {
@@ -152,12 +150,7 @@ class DashboardViewModel: ObservableObject {
     }
     
     func getTotalDiskSpace() -> String {
-        guard let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
-              let total = attrs[.systemSize] as? Double else {
-            return "N/A"
-        }
-        let gb = total / 1024 / 1024 / 1024
-        return String(format: "%.1f GB", gb)
+        return totalDiskSpaceString
     }
     
     func getUptimeString() -> String {
@@ -170,16 +163,18 @@ class DashboardViewModel: ObservableObject {
     
     // MARK: - Refresh des stats système
     
-    private func refreshStats() {
+    private func refreshStats() async {
         let cpu = SystemMetrics.cpuUsageFraction()
         let ram = SystemMetrics.ramUsedFraction()
-        let stor = SystemMetrics.storageFraction()
+        let storage = await SystemMetrics.storageInfo()
         let battery = UIDevice.current.batteryLevel
         let state = UIDevice.current.batteryState
         
         self.cpuFraction = cpu > 0 ? cpu : 0.12
         self.ramFraction = ram > 0 ? ram : 0.55
-        self.storageFraction = stor > 0 ? stor : 0.22
+        self.storageFraction = storage.usedFraction > 0 ? storage.usedFraction : 0.22
+        self.totalDiskSpaceGB = storage.totalGB
+        self.totalDiskSpaceString = storage.totalString
         self.batteryLevel = battery >= 0 ? battery : 0.93
         self.batteryState = state
     }

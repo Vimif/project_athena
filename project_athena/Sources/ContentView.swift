@@ -14,7 +14,7 @@ struct ContentView: View {
                         model: DeviceUtils.deviceModel(),
                         chip: viewModel.getChipModel(model: DeviceUtils.deviceModel()),
                         memory: viewModel.getTotalMemory(),
-                        storage: viewModel.getTotalDiskSpace(),
+                        storage: viewModel.totalDiskSpaceString,
                         uptime: viewModel.getUptimeString(),
                         lastReboot: DeviceUtils.lastBootDateString()
                     )
@@ -24,8 +24,8 @@ struct ContentView: View {
                         cpuFraction: viewModel.cpuFraction,
                         ramFraction: viewModel.ramFraction,
                         ramGo: Double(ProcessInfo.processInfo.physicalMemory) / 1024 / 1024 / 1024,
-                        storageUsed: viewModel.storageFraction * viewModel.getTotalDiskSpaceDouble(),
-                        storageTotal: viewModel.getTotalDiskSpaceDouble(),
+                        storageUsed: viewModel.storageFraction * viewModel.totalDiskSpaceGB,
+                        storageTotal: viewModel.totalDiskSpaceGB,
                         percentUsed: viewModel.storageFraction,
                         batteryLevel: viewModel.batteryLevel,
                         batteryState: viewModel.batteryState,
